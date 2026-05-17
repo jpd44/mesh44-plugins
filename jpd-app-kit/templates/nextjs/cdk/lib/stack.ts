@@ -65,11 +65,18 @@ export class {{APP_NAME_PASCAL}}Stack extends cdk.Stack {
       versioned: false,
     });
 
-    // BEGIN_DOMAIN
-    const wwwRedirectFn = new cloudfront.Function(this, "WwwRedirect", {
+    // Viewer-request function:
+    //   1. (optional) 301 www→apex when a custom domain is configured
+    //   2. Rewrite pretty URLs to the .html files that next build produces
+    //      (Next static export uses flat-file routing: /foo → /foo.html, not /foo/index.html).
+    //      Falling back to /index.html on 403/404 is a SPA pattern that silently masks
+    //      every missing page as the homepage — never do that for multi-page Next sites.
+    const viewerRequestFn = new cloudfront.Function(this, "ViewerRequest", {
       code: cloudfront.FunctionCode.fromInline(`
 function handler(event) {
   var req = event.request;
+
+  // BEGIN_DOMAIN
   var host = req.headers.host && req.headers.host.value;
   if (host === '${wwwDomain}') {
     return {
@@ -78,11 +85,26 @@ function handler(event) {
       headers: { location: { value: 'https://${domainName}' + req.uri } }
     };
   }
+  // END_DOMAIN
+
+  var uri = req.uri;
+  if (uri === '/') {
+    req.uri = '/index.html';
+    return req;
+  }
+  if (uri.length > 1 && uri.endsWith('/')) {
+    uri = uri.slice(0, -1);
+  }
+  var lastSegment = uri.substring(uri.lastIndexOf('/') + 1);
+  if (lastSegment.indexOf('.') === -1) {
+    req.uri = uri + '.html';
+  } else {
+    req.uri = uri;
+  }
   return req;
 }
       `),
     });
-    // END_DOMAIN
 
     const distribution = new cloudfront.Distribution(this, "Distribution", {
       defaultRootObject: "index.html",
@@ -98,26 +120,24 @@ function handler(event) {
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
         compress: true,
-        // BEGIN_DOMAIN
         functionAssociations: [
           {
-            function: wwwRedirectFn,
+            function: viewerRequestFn,
             eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
           },
         ],
-        // END_DOMAIN
       },
       errorResponses: [
         {
           httpStatus: 403,
-          responseHttpStatus: 200,
-          responsePagePath: "/index.html",
+          responseHttpStatus: 404,
+          responsePagePath: "/404.html",
           ttl: cdk.Duration.minutes(1),
         },
         {
           httpStatus: 404,
-          responseHttpStatus: 200,
-          responsePagePath: "/index.html",
+          responseHttpStatus: 404,
+          responsePagePath: "/404.html",
           ttl: cdk.Duration.minutes(1),
         },
       ],
