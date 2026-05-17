@@ -1,0 +1,20 @@
+{
+  "name": "jpd-app-kit",
+  "description": "Scaffold a new AWS-deployed web app end-to-end. Skills: /preflight (config + CLI + SSO + GitHub auth checks), /new-app (orchestrator), /aws-account (create child account in your AWS Organization), /domain (Route 53 register + delegate hosted zone), /github-repo (private repo under your configured org), /cdk-stack (S3+CloudFront+optional Cognito+optional HTTP API+CodePipeline via CDK). Reads ~/.config/jpd-app-kit/config.json.",
+  "version": "0.1.0",
+  "author": {
+    "name": "jpd44"
+  },
+  "homepage": "https://github.com/jpd44/jpd-app-kit",
+  "keywords": [
+    "aws",
+    "cdk",
+    "cloudfront",
+    "cognito",
+    "codepipeline",
+    "route53",
+    "scaffolding",
+    "vite",
+    "nextjs"
+  ]
+}
