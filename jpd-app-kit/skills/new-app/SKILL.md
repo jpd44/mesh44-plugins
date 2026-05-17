@@ -26,16 +26,24 @@ The reason: every later step assumes `AWS_PROFILE=mgt` works and `gh` can push t
 
 ## Inputs to gather first
 
-Ask in **one** AskUserQuestion turn (don't drip questions one at a time):
+Ask in **two** AskUserQuestion turns. Split deliberately so creative inputs don't sit next to billable infra decisions.
+
+**Round 1 — infrastructure shape:**
 
 1. **App name** — kebab-case (e.g., `kanji-trainer`). Used as folder name, AWS profile suffix (`child-<name>`), GitHub repo, and CDK stack id.
 2. **Stack** — `vite` (React 18 SPA, like daily-deutsch) or `nextjs` (Next.js 15 static export to S3/CloudFront).
-3. **Domain** — either an apex domain to register/use (e.g., `kanji-trainer.com`), or **skip**. If skipped, the app is served only from the CloudFront default URL (`d1234.cloudfront.net`) — no Route 53, no ACM cert, no www→apex redirect. The user can always add a domain later by uncommenting the `BEGIN_DOMAIN` blocks and redeploying.
+3. **Domain** — either an apex domain to register/use (e.g., `kanji-trainer.com`), or **skip**. If skipped, the app is served only from the CloudFront default URL (`d1234.cloudfront.net`) — no Route 53, no ACM cert, no www→apex redirect.
 4. **Cognito auth?** — yes/no. Adds a Cognito UserPool + UserPoolClient, plus (for Vite) shadcn-based SignIn/SignUp/ConfirmSignUp forms and an `AuthProvider`/`AuthGuard` in `src/`.
-5. **Protected HTTP API?** — yes/no. Adds an API Gateway HTTP API with a Cognito JWT authorizer and one sample Lambda at `GET /hello` that returns the caller's `sub`. **Requires Cognito** — if the user picks "API yes / Cognito no," tell them and re-ask.
+5. **Protected HTTP API?** — yes/no. Adds an API Gateway HTTP API with a Cognito JWT authorizer and one sample Lambda at `GET /hello`. **Requires Cognito** — if the user picks "API yes / Cognito no," tell them and re-ask.
 6. **LLM Lambda?** — yes/no. The daily-deutsch pattern: unauthenticated Lambda Function URL that proxies Bedrock with CORS only. Independent of Cognito/API.
 
-Treat 4/5/6 as three separate toggles. Don't bundle them — the user wants to add only what each app actually needs.
+Treat 4/5/6 as three separate toggles. Don't bundle them.
+
+**Round 2 — what to build:**
+
+7. **App description** — free-form text describing what the app does. Examples: *"joke website with language selector and culturally relative jokes"*, *"flashcard app for kanji with SRS scheduling"*, *"checklist tracker that syncs to localStorage"*. **Required** — step 1b uses this to produce a real first iteration of the app. If the user types nothing, ask again or default to "minimal landing page with the app name as the title."
+8. **Design reference URL (optional)** — a URL to a Claude Designer artifact, Stitch project, Figma frame, Dribbble shot, or any other design source. Anything `WebFetch` (or the Stitch MCP) can reach. Leave blank to skip.
+9. **Style reference URL (optional)** — a URL to an existing website whose visual language to mimic (palette, typography, density, sharp vs. rounded). E.g., `https://linear.app`, `https://daily-deutsch.com`. Leave blank to skip.
 
 ## Step sequence
 
@@ -50,16 +58,41 @@ Run these in order **after** preflight has passed. After each, give a one-line s
 - For Next.js: `npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --no-eslint --import-alias '@/*'`, then set `output: 'export'` in `next.config.ts`.
 - Copy `templates/<stack>/cdk/` into `./<app>/cdk/`. **Rename `lib/stack.ts` to `lib/<app-name>-stack.ts`.** Strip the block markers per the matrix in the `cdk-stack` skill, but **leave `{{AWS_ACCOUNT_ID}}` as-is in `cdk/bin/app.ts`** — we don't have the real ID yet; step 3 will fill it in.
 
+### 1b. First-cut implementation from description + design refs (no confirmation)
+
+This is what makes the initial commit *meaningful* instead of "Vite scaffold + my project name." Use the round-2 inputs.
+
+1. **Fetch design references.** If `design_reference_url` is set, `WebFetch` it (or use the Stitch MCP — `mcp__stitch__get_project` / `mcp__stitch__get_screen` — if the URL points at a Stitch project). If `style_reference_url` is set, `WebFetch` it and extract the design language: dominant colors, font families, spacing rhythm, corner radii, shadow style, button shape, density. Capture 3–5 concrete design facts. Don't try to clone the site.
+
+2. **Delegate frontend generation to the `frontend-design` skill** (the user has `frontend-design:frontend-design` enabled). Hand it:
+   - The `app_description`.
+   - The 3–5 design facts you extracted (or "no reference provided — pick a coherent visual language" if both URLs were blank).
+   - The constraint that output must fit the round-1 stack and feature toggles.
+   The `frontend-design` skill should produce a credible first iteration — real pages, real typed data shapes, real interactions — not stub pages.
+
+3. **Constraints to enforce when delegating:**
+   - Stay within the round-1 stack (Vite + React 18 OR Next.js 15).
+   - Use shadcn/ui primitives in `src/components/ui/`; install via `npx shadcn@latest add <name>` as needed.
+   - Use Tailwind for layout; only customize `tailwind.config` for the extracted palette/fonts.
+   - **Don't** add features round 1 didn't authorize. If Cognito=no, the first cut must work without auth. If API=no, all data must be client-side (typed arrays or `localStorage`).
+   - Keep it tight — ~5–10 files of real app code, not a full product.
+
+4. **Sanity-check the build.** Run `npm run build`. It must pass before step 2 — a broken build in the initial commit blocks the CodePipeline from ever turning green.
+
+5. If both `design_reference_url` and `style_reference_url` are blank, still call `frontend-design` with just the description; it's much better at making aesthetic choices than the bare template.
+
 ### 2. GitHub repo + initial commit — execute, no prompt
 
 This step happens **before** AWS provisioning so the codebase is under version control immediately. Even if AWS account creation later fails or stalls, the user keeps a versioned scaffold they can return to.
 
 Defer to the `github-repo` skill (which loads `github.org` from config):
-- `git add . && git commit -m "Initial scaffold from jpd-app-kit"`.
+- `git add . && git commit -m "Initial scaffold + first cut: <one-line summary of app_description>"`.
 - `gh repo create $GH_ORG/<app-name> --private --source . --remote origin --push`.
 - Print the repo URL.
 
-The first commit will contain `{{AWS_ACCOUNT_ID}}` placeholder in `cdk/bin/app.ts`. That's fine — `cdk synth` isn't run until step 4 once the real account exists, and step 4 commits the substitution as a follow-up.
+The first commit now contains both the infra scaffold AND the real first iteration of the app from step 1b — someone landing on the repo cold can `npm install && npm run dev` and immediately see the idea, not a blank Vite page.
+
+The first commit will still contain `{{AWS_ACCOUNT_ID}}` placeholder in `cdk/bin/app.ts`. That's fine — `cdk synth` isn't run until step 5 once the real account exists, and step 3 commits the substitution as a follow-up.
 
 ### 3. AWS child account — **prompt before creating**
 
