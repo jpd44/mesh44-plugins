@@ -2,13 +2,13 @@
 description: End-to-end scaffolder for a new web app. Walks through local repo setup, AWS child account, optional Route 53 domain, private GitHub repo, and CodePipeline-driven CDK deployment. Confirm with the user before any billable or destructive step.
 ---
 
-# /jpd-app-kit:new-app — full app bootstrap
+# /app-kit:new-app — full app bootstrap
 
 You are bootstrapping a new web app the way the reference apps `daily-deutsch` and `munichmotoclub` are set up. **You must execute** the local steps and **prompt the user before** any step that costs money, creates a long-lived AWS resource, or registers a domain. The user has opted into "execute with confirmation."
 
 ## Assumed starting state
 
-- The user has a populated `~/.config/jpd-app-kit/config.json` (copied from `config.json.example` and filled in). Preflight loads it and fails fast if it's missing.
+- The user has a populated `~/.config/mesh44/config.json` (copied from `config.json.example` and filled in). Preflight loads it and fails fast if it's missing.
 - The user is sitting in `developer_dir` from that config (or one of `developer_dir_symlinks`). All new apps go into `./<app-name>` from there.
 - The user is signed into the AWS **management** account via `AWS_PROFILE=mgt`. Preflight verifies the account ID matches `aws.mgt_account_id` from config.
 - The user is signed into `gh` and is a member of `github.org` (from config) with `repo` + `admin:org` (or `write:org`) scopes. Preflight verifies this too.

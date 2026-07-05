@@ -2,7 +2,7 @@
 description: Render the CDK stack template into a new app's cdk/ directory, bootstrap the child account, and run the first deploy. Use when a new app needs its S3+CloudFront+CodePipeline infrastructure.
 ---
 
-# /jpd-app-kit:cdk-stack — render and deploy infra
+# /app-kit:cdk-stack — render and deploy infra
 
 This mirrors `daily-deutsch/cdk/`: S3 (private, OAC) → CloudFront (apex + www, ACM, www-to-apex redirect, SPA error rewrite) → Route 53 alias records → CodeStar GitHub connection → CodeBuild test + CodeBuild build/deploy → CodePipeline V2 with Source/Test/BuildAndDeploy stages.
 

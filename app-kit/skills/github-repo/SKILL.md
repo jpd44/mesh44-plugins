@@ -2,12 +2,12 @@
 description: Create a private GitHub repo under the configured org, push the initial commit, and configure default branch + branch protection.
 ---
 
-# /jpd-app-kit:github-repo — private repo under the configured org
+# /app-kit:github-repo — private repo under the configured org
 
 ## Load config first
 
 ```bash
-GH_ORG=$(jq -r .github.org ~/.config/jpd-app-kit/config.json)
+GH_ORG=$(jq -r .github.org ~/.config/mesh44/config.json)
 ```
 
 ## Prereqs
@@ -27,7 +27,7 @@ GH_ORG=$(jq -r .github.org ~/.config/jpd-app-kit/config.json)
    ```bash
    cd <app-path>
    git add .
-   git commit -m "Initial commit from jpd-app-kit"
+   git commit -m "Initial commit from app-kit"
    ```
 
 3. **Create the repo** and push:

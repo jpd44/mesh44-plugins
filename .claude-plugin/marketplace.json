@@ -1,12 +1,12 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "jpd-personal",
-  "description": "jpd44's personal Claude Code plugins",
+  "name": "mesh44",
+  "description": "jpd44's personal Claude Code plugins for building and running well-architected AWS apps",
   "owner": { "name": "jpd44" },
   "plugins": [
     {
-      "name": "jpd-app-kit",
-      "description": "Scaffold a new AWS-deployed web app end-to-end. Skills: /preflight (config + CLI + SSO + GitHub auth checks), /new-app (orchestrator), /aws-account (create child account in your AWS Organization), /domain (Route 53 register + delegate hosted zone), /github-repo (private repo under your configured org), /cdk-stack (S3+CloudFront+optional Cognito+optional HTTP API+CodePipeline via CDK). Reads ~/.config/jpd-app-kit/config.json.",
+      "name": "app-kit",
+      "description": "Scaffold a new AWS-deployed web app end-to-end. Skills: /preflight (config + CLI + SSO + GitHub auth checks), /new-app (orchestrator), /aws-account (create child account in your AWS Organization), /domain (Route 53 register + delegate hosted zone), /github-repo (private repo under your configured org), /cdk-stack (S3+CloudFront+optional Cognito+optional HTTP API+CodePipeline via CDK). Reads ~/.config/mesh44/config.json.",
       "author": { "name": "jpd44" },
       "category": "deployment",
       "tags": [
@@ -18,11 +18,31 @@
       ],
       "source": {
         "source": "git-subdir",
-        "url": "https://github.com/jpd44/app-automation.git",
-        "path": "jpd-app-kit",
+        "url": "https://github.com/jpd44/mesh44-plugins.git",
+        "path": "app-kit",
         "ref": "main"
       },
-      "homepage": "https://github.com/jpd44/app-automation"
+      "homepage": "https://github.com/jpd44/mesh44-plugins"
+    },
+    {
+      "name": "cost",
+      "description": "Local-first AWS Organization spend dashboard. Skills: /dashboard (launch the mesh44-cost web dashboard with your own AWS credentials) and /ask (natural-language questions about your spend from local Cost Explorer data). Reads AWS profiles from ~/.aws/config; nothing is stored or sent anywhere.",
+      "author": { "name": "jpd44" },
+      "category": "finops",
+      "tags": [
+        "aws",
+        "cost-explorer",
+        "finops",
+        "dashboard",
+        "organizations"
+      ],
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/jpd44/mesh44-plugins.git",
+        "path": "cost",
+        "ref": "main"
+      },
+      "homepage": "https://github.com/jpd44/mesh44-cost"
     }
   ]
 }

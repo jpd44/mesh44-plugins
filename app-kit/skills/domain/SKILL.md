@@ -2,11 +2,11 @@
 description: Check Route 53 domain availability, register if approved, and set up cross-account hosted zone delegation so the child account's CDK stack can manage DNS.
 ---
 
-# /jpd-app-kit:domain — Route 53 domain + delegated hosted zone
+# /app-kit:domain — Route 53 domain + delegated hosted zone
 
 ## Why two accounts touch this
 
-Domain **registration** lives in the management account (`mgt`, ID from `aws.mgt_account_id` in `~/.config/jpd-app-kit/config.json`) for consolidated billing. The **hosted zone** the CDK stack uses lives in the **child** account so the stack can `route53.HostedZone.fromLookup` it without cross-account roles. We bridge them with an NS delegation.
+Domain **registration** lives in the management account (`mgt`, ID from `aws.mgt_account_id` in `~/.config/mesh44/config.json`) for consolidated billing. The **hosted zone** the CDK stack uses lives in the **child** account so the stack can `route53.HostedZone.fromLookup` it without cross-account roles. We bridge them with an NS delegation.
 
 ## Steps
 

@@ -1,6 +1,6 @@
 # Frontend auth bundle
 
-These files get copied into the new app's `src/` when **Cognito** is selected in `/jpd-app-kit:new-app`. They wire up Cognito user pools to a shadcn-based sign-in/sign-up UI and provide an `apiFetch` helper that attaches the user's ID token to every protected request.
+These files get copied into the new app's `src/` when **Cognito** is selected in `/app-kit:new-app`. They wire up Cognito user pools to a shadcn-based sign-in/sign-up UI and provide an `apiFetch` helper that attaches the user's ID token to every protected request.
 
 ## What gets copied where
 

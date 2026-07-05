@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy this file to ~/.config/jpd-app-kit/config.json and fill in your values. The plugin reads from that path, not from this file.",
+  "_comment": "Copy this file to ~/.config/mesh44/config.json and fill in your values. The plugin reads from that path, not from this file.",
 
   "aws": {
     "mgt_account_id": "<YOUR_MGT_ACCOUNT_ID>",

@@ -2,11 +2,11 @@
 description: Create a new child AWS account in the configured organization, assign the AdministratorAccess permission set via IAM Identity Center, and register a local SSO profile for it. Use when a new app needs an isolated AWS account.
 ---
 
-# /jpd-app-kit:aws-account — provision a child account
+# /app-kit:aws-account — provision a child account
 
 ## Load config first
 
-Read `~/.config/jpd-app-kit/config.json`. You need:
+Read `~/.config/mesh44/config.json`. You need:
 
 - `aws.mgt_account_id`
 - `aws.sso_start_url`
@@ -15,7 +15,7 @@ Read `~/.config/jpd-app-kit/config.json`. You need:
 - `aws.sso_role_name` (this is also the IAM Identity Center permission set name to assign, e.g., `AdministratorAccess`)
 - `aws.account_email_template` (a string with `{app_name}` substitution, e.g., `you+{app_name}@example.com`)
 
-If the file doesn't exist, stop and tell the user to copy `config.json.example` to `~/.config/jpd-app-kit/config.json`.
+If the file doesn't exist, stop and tell the user to copy `config.json.example` to `~/.config/mesh44/config.json`.
 
 ## Org facts (sourced from config)
 

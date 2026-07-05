@@ -2,21 +2,21 @@
 description: Verify prerequisites before /new-app — config file present, AWS mgt session, GitHub auth + configured-org membership, and required local CLIs. Use whenever a workflow needs the user signed in or tools installed.
 ---
 
-# /jpd-app-kit:preflight — verify auth and CLIs
+# /app-kit:preflight — verify auth and CLIs
 
 Run **all checks**, collect failures, then print a single summary. Don't bail on the first failure — the user wants to fix everything in one pass.
 
 ## Load config first
 
-Before any check, read `~/.config/jpd-app-kit/config.json`:
+Before any check, read `~/.config/mesh44/config.json`:
 
 ```bash
-cat ~/.config/jpd-app-kit/config.json
+cat ~/.config/mesh44/config.json
 ```
 
 If it doesn't exist, **fail with this message** and stop:
 
-> Missing `~/.config/jpd-app-kit/config.json`. Copy `<plugin>/config.json.example` to that path and fill in your AWS management account ID, SSO start URL, GitHub org, and developer dir.
+> Missing `~/.config/mesh44/config.json`. Copy `<plugin>/config.json.example` to that path and fill in your AWS management account ID, SSO start URL, GitHub org, and developer dir.
 
 Extract these values for use throughout the checks:
 
@@ -117,7 +117,7 @@ Failure fix: `gh auth login` (interactive; tell the user, don't run for them).
 ### E. GitHub — member of the configured org with repo-create permission
 
 ```bash
-GH_ORG=$(jq -r .github.org ~/.config/jpd-app-kit/config.json)
+GH_ORG=$(jq -r .github.org ~/.config/mesh44/config.json)
 gh api orgs/$GH_ORG/memberships/$(gh api user --jq .login) --jq '.role,.state'
 ```
 
@@ -142,9 +142,9 @@ Doesn't need to be installed globally — just needs npx to resolve it. If this 
 After all checks complete, print **one table** like this:
 
 ```
-Preflight checks for jpd-app-kit
+Preflight checks for app-kit
 
-  Config file           [OK | MISSING ~/.config/jpd-app-kit/config.json]
+  Config file           [OK | MISSING ~/.config/mesh44/config.json]
   Working directory     [OK <path> | WRONG: <path>]
   Local CLIs            [OK | MISSING: <list>]
   AWS mgt session       [OK as <account-id> | EXPIRED | WRONG ACCOUNT: <got>]
@@ -160,5 +160,5 @@ If anything failed, append a numbered "Fixes" section with the exact command(s) 
 
 ## When to call this skill
 
-- **Always** as step 0 of `/jpd-app-kit:new-app`. If preflight returns `NEEDS ATTENTION`, stop the workflow — don't ask the app-name question yet, fixing prereqs first is cheaper than tearing down half-created resources.
-- On demand via `/jpd-app-kit:preflight` if the user wants a standalone check.
+- **Always** as step 0 of `/app-kit:new-app`. If preflight returns `NEEDS ATTENTION`, stop the workflow — don't ask the app-name question yet, fixing prereqs first is cheaper than tearing down half-created resources.
+- On demand via `/app-kit:preflight` if the user wants a standalone check.

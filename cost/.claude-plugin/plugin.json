@@ -1,0 +1,16 @@
+{
+  "name": "cost",
+  "description": "Local-first AWS Organization spend dashboard. Skills: /dashboard (launch the mesh44-cost web dashboard using your own AWS credentials) and /ask (answer natural-language questions about your spend from local Cost Explorer data). Reads AWS profiles from ~/.aws/config; nothing is stored or sent anywhere.",
+  "version": "0.1.0",
+  "author": {
+    "name": "jpd44"
+  },
+  "homepage": "https://github.com/jpd44/mesh44-cost",
+  "keywords": [
+    "aws",
+    "cost-explorer",
+    "finops",
+    "dashboard",
+    "organizations"
+  ]
+}
