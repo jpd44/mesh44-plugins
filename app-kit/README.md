@@ -11,6 +11,19 @@ A personal Claude Code plugin that scaffolds a new web app end-to-end: a private
 
 Then complete the one-time AWS + GitHub setup below and drop your config at `~/.config/mesh44/config.json` (see [First-time setup](#first-time-setup)).
 
+## Why not just AWS Amplify?
+
+Amplify is a great fit when you want AWS to manage a fullstack backend behind its own abstraction. app-kit goes the other way: every app lands in its own AWS account with a plain CDK stack you can read, change, and keep — standard primitives (S3 + OAC, CloudFront, CodePipeline), no Amplify-specific constructs to unwind later.
+
+| AWS Amplify | mesh44 app-kit |
+| --- | --- |
+| All your apps share one AWS account — billing and IAM blast radius mingle. | One AWS child account per app — itemized billing, bounded blast radius. |
+| Infra lives behind Amplify's framework + managed hosting; ejecting is hard. | A plain CDK stack you own: S3 + OAC, CloudFront, CodePipeline — read it, change it. |
+| Amplify-specific backend definitions and client libraries — framework lock-in. | Vanilla Vite/Next + standard AWS primitives — nothing framework-specific to unwind. |
+| Batteries-included backend (auth, data, storage) — if you adopt the whole model. | Opt-in Cognito / HTTP API / LLM Lambda when you want them, not by default. |
+
+**The honest tradeoff:** Amplify *hides* the infrastructure; app-kit *hands it to you*. If you want a managed fullstack backend and don't need per-app account isolation, Amplify is the shorter path. If you want isolated accounts, portable CDK you control, and standard primitives with no vendor abstraction to grow out of, that's app-kit.
+
 ## Prerequisites
 
 This plugin assumes a specific AWS + GitHub setup that's typical for someone running multiple small apps from a personal AWS Organization. **None of the AWS-side setup is automated by the plugin** — the plugin uses it. Walk through each section below before running `/new-app` for the first time.
