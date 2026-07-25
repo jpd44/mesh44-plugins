@@ -12,6 +12,17 @@
             "suppressOutput": true
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/capture-commit.sh",
+            "timeout": 10,
+            "suppressOutput": true
+          }
+        ]
       }
     ],
     "SessionStart": [

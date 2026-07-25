@@ -10,6 +10,7 @@ Part of the [mesh44](https://github.com/jpd44/mesh44-plugins) plugin marketplace
 - **Automatic session sweep** — a `SessionEnd` hook that, when a coding session wraps up, quietly scans the transcript for genuinely new ideas and appends them to `devkb/Session Inbox.md` for you to triage later. This is the low-confidence catch-net; `/devkb:capture` is the curated path.
 - **Startup context (optional)** — a `SessionStart` hook that injects an index of the current project's notes plus `general_learnings/` (titles + summaries) into new sessions, so Claude knows what's already in your knowledge base. Controlled by `obsidian.load_on_startup`.
 - **Popularity score** — a `PostToolUse` hook bumps a `references` counter in a note's frontmatter each session it gets read, so your most-reused ideas rise to the top (shown as `⟳N` in the startup index).
+- **Capture on commit (optional)** — a `PostToolUse(Bash)` hook that, on each `git commit`, snapshots the session's highlights (ideas, decisions, learnings) into the project inbox tagged with the commit. Controlled by `obsidian.commit_capture`.
 
 ## How it's organised
 
@@ -37,7 +38,8 @@ Reads `~/.config/mesh44/config.json`:
   "obsidian": {
     "vault": "/Users/you/Documents/Obsidian Vault",
     "folder": "devkb",
-    "load_on_startup": "index"
+    "load_on_startup": "index",
+    "commit_capture": "off"
   }
 }
 ```
@@ -45,6 +47,7 @@ Reads `~/.config/mesh44/config.json`:
 - `vault` — defaults to `~/Documents/Obsidian Vault`.
 - `folder` — the subfolder notes live in; defaults to `devkb`.
 - `load_on_startup` — `"index"` (default: inject titles + summaries at session start), `"full"` (bodies too, until a 10k-char cap), or `"off"`.
+- `commit_capture` — `"on"` to snapshot session highlights into the project inbox on each `git commit`; `"off"` (default).
 
 ## Privacy
 

@@ -8,6 +8,11 @@ set -uo pipefail
 transcript="${DEVKB_TRANSCRIPT:-}"
 session_id="${DEVKB_SESSION_ID:-}"
 cwd="${DEVKB_CWD:-}"
+# trigger: "session-end" (default) sweeps once when a session ends; "commit"
+# snapshots the session's highlights at a git commit (deduped by SHA upstream).
+trigger="${DEVKB_TRIGGER:-session-end}"
+commit_short="${DEVKB_COMMIT_SHORT:-}"
+commit_subject="${DEVKB_COMMIT_SUBJECT:-}"
 [[ -n "$transcript" && -f "$transcript" ]] || exit 0
 
 state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/mesh44-devkb"
@@ -15,8 +20,10 @@ mkdir -p "$state_dir"
 seen="$state_dir/processed-sessions.txt"
 touch "$seen"
 
-# Dedup: SessionEnd can fire more than once for a session (e.g. /clear then exit).
-if [[ -n "$session_id" ]] && grep -qxF "$session_id" "$seen" 2>/dev/null; then
+# Session-end can fire more than once for a session (e.g. /clear then exit), so
+# dedup by session. Commit-triggered runs dedup by SHA upstream and can legitimately
+# fire several times per session, so they skip this.
+if [[ "$trigger" == "session-end" && -n "$session_id" ]] && grep -qxF "$session_id" "$seen" 2>/dev/null; then
   exit 0
 fi
 
@@ -55,7 +62,7 @@ text="$(jq -r '
 
 # Skip trivial sessions — not worth a model call.
 if [[ "${#text}" -lt 400 ]]; then
-  [[ -n "$session_id" ]] && echo "$session_id" >>"$seen"
+  [[ "$trigger" == "session-end" && -n "$session_id" ]] && echo "$session_id" >>"$seen"
   exit 0
 fi
 
@@ -63,22 +70,22 @@ fi
 text="$(printf '%s' "$text" | tail -c 40000)"
 
 read -r -d '' prompt <<'EOF' || true
-You are extracting durable ideas from a coding-session transcript for a personal
-Obsidian inbox. Read the transcript on stdin. Identify ONLY genuinely new ideas
-worth keeping — reusable insights, design directions, or things to build that
-surfaced during the session. EXCLUDE routine task completion, bug fixes, status
-updates, restated requirements, and anything trivial or obvious. Prefer zero
-bullets over filler. Output each idea as one markdown bullet exactly like:
-"- **Short title** — one-sentence description."
-If there are no such ideas, output exactly: NONE
+You are extracting the durable highlights of a coding-session transcript for a
+personal Obsidian inbox. Read the transcript on stdin. Identify ONLY genuinely
+worth-keeping highlights — new ideas, design directions, decisions made, and
+learnings that surfaced during the session. EXCLUDE routine task completion,
+mechanical edits, status updates, restated requirements, and anything trivial or
+obvious. Prefer zero bullets over filler. Output each as one markdown bullet
+exactly like: "- **Short title** — one-sentence description."
+If there are no such highlights, output exactly: NONE
 Output nothing else.
 EOF
 
 # Fast, cheap model for the extraction pass.
 ideas="$(printf '%s' "$text" | claude -p "$prompt" --model claude-haiku-4-5-20251001 2>/dev/null)"
 
-# Mark processed regardless, so we never retry the same session.
-[[ -n "$session_id" ]] && echo "$session_id" >>"$seen"
+# Mark the session processed (session-end only; commit runs are deduped by SHA).
+[[ "$trigger" == "session-end" && -n "$session_id" ]] && echo "$session_id" >>"$seen"
 
 trimmed="$(printf '%s' "$ideas" | tr -d '[:space:]')"
 [[ -z "$trimmed" || "$trimmed" == "NONE" ]] && exit 0
@@ -92,11 +99,17 @@ date_str="$(date '+%Y-%m-%d %H:%M')"
 need_header=""
 [[ -f "$inbox" ]] || need_header=1
 
+if [[ "$trigger" == "commit" ]]; then
+  heading="## ${date_str} — commit \`${commit_short}\`: ${commit_subject}"
+else
+  heading="## ${date_str}"
+fi
+
 {
   if [[ -n "$need_header" ]]; then
-    printf -- '---\ntags: [idea, inbox]\nproject: %s\n---\n\n# %s — Session Inbox\n\nAuto-captured ideas from coding sessions in this project. Triage into atomic notes (see `/devkb:capture`), or promote cross-cutting ones to `../general_learnings/`.\n' "$project" "$project"
+    printf -- '---\ntags: [idea, inbox]\nproject: %s\n---\n\n# %s — Session Inbox\n\nAuto-captured highlights from coding sessions in this project. Triage into atomic notes (see `/devkb:capture`), or promote cross-cutting ones to `../general_learnings/`.\n' "$project" "$project"
   fi
-  printf -- '\n## %s\n\n%s\n' "$date_str" "$ideas"
+  printf -- '\n%s\n\n%s\n' "$heading" "$ideas"
 } >>"$inbox"
 
 exit 0
