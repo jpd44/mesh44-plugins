@@ -43,6 +43,26 @@
         "ref": "main"
       },
       "homepage": "https://github.com/jpd44/mesh44-cost"
+    },
+    {
+      "name": "devkb",
+      "description": "Turn coding sessions into a developer knowledge base in Obsidian. Skill: /capture (on demand — save an idea, or sweep the current session for ideas worth keeping, as atomic notes). Also ships a SessionEnd hook that automatically sweeps each finished session for new ideas and drops them into an inbox for later triage. Local-first: reads the vault path from ~/.config/mesh44/config.json; nothing leaves your machine.",
+      "author": { "name": "jpd44" },
+      "category": "productivity",
+      "tags": [
+        "obsidian",
+        "knowledge-base",
+        "notes",
+        "ideas",
+        "pkm"
+      ],
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/jpd44/mesh44-plugins.git",
+        "path": "devkb",
+        "ref": "main"
+      },
+      "homepage": "https://github.com/jpd44/mesh44-plugins"
     }
   ]
 }

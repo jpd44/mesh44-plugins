@@ -13,5 +13,12 @@
     "org": "<your-github-org>"
   },
   "developer_dir": "$HOME/Developer",
-  "developer_dir_symlinks": []
+  "developer_dir_symlinks": [],
+
+  "_comment_obsidian": "Used by the `devkb` plugin. Optional — vault defaults to ~/Documents/Obsidian Vault, folder to devkb, load_on_startup to index.",
+  "obsidian": {
+    "vault": "$HOME/Documents/Obsidian Vault",
+    "folder": "devkb",
+    "load_on_startup": "index"
+  }
 }

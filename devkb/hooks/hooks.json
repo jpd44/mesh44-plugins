@@ -1,0 +1,43 @@
+{
+  "description": "devkb plugin — inject the KB index at session start; count note references for a popularity score; sweep each finished session for ideas into the Obsidian inbox",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/track-reference.sh",
+            "timeout": 10,
+            "suppressOutput": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/load-kb.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/capture-ideas.sh",
+            "timeout": 15,
+            "suppressOutput": true
+          }
+        ]
+      }
+    ]
+  }
+}
