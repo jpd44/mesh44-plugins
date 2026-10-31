@@ -29,7 +29,9 @@ npx shadcn@latest add button input label card
 
 ## Wiring it into `App.tsx`
 
-The orchestrator inserts this snippet (or prompts before editing if `App.tsx` is non-trivial):
+First decide which part of the app needs sign-in; the orchestrator asks if the app description doesn't make it obvious.
+
+**Whole app behind sign-in** (a private tool):
 
 ```tsx
 import { AuthProvider } from "@/components/AuthProvider";
@@ -43,6 +45,23 @@ export default function App() {
       </AuthGuard>
     </AuthProvider>
   );
+}
+```
+
+**Public site with a signed-in area** (e.g. `/editor`, `/account`): guard only that route and lazy-load it, so public pages never ship the Cognito SDK. CloudFront already rewrites unknown paths to `index.html`, so a pathname check is enough for one or two routes:
+
+```tsx
+// src/App.tsx
+import { lazy, Suspense } from "react";
+import HomePage from "@/pages/HomePage";
+
+const AccountPage = lazy(() => import("@/pages/AccountPage")); // wraps itself in AuthProvider + AuthGuard
+
+export default function App() {
+  if (window.location.pathname.startsWith("/account")) {
+    return <Suspense fallback={null}><AccountPage /></Suspense>;
+  }
+  return <HomePage />;
 }
 ```
 

@@ -121,7 +121,15 @@ GH_ORG=$(jq -r .github.org ~/.config/mesh44/config.json)
 gh api orgs/$GH_ORG/memberships/$(gh api user --jq .login) --jq '.role,.state'
 ```
 
-Pass: `state == "active"` and `role` is `admin` or `member`. If 404, the user isn't a member of the org — stop, can't create repos there.
+Pass: `state == "active"` and `role` is `admin` or `member`.
+
+If it returns 404, check whether `github.org` is actually a personal account before failing:
+
+```bash
+gh api users/$GH_ORG --jq .type   # "User" or "Organization"
+```
+
+If the type is `User` and `$GH_ORG` equals the authed login (`gh api user --jq .login`), **pass** with `OK (personal account)`: the user owns that namespace and `gh repo create $GH_ORG/<name>` works. Only a 404 for an `Organization`, or a `User` that isn't the authed login, means the user can't create repos there. In that case, stop.
 
 Also verify the token scope includes repo creation:
 ```bash
@@ -150,7 +158,7 @@ Preflight checks for app-kit
   AWS mgt session       [OK as <account-id> | EXPIRED | WRONG ACCOUNT: <got>]
   AWS Organizations     [OK | FAIL: <message>]
   GitHub auth           [OK as <user> | NOT LOGGED IN]
-  GitHub <org> access   [OK (<role>) | NOT A MEMBER | MISSING SCOPE: <list>]
+  GitHub <org> access   [OK (<role>) | OK (personal account) | NOT A MEMBER | MISSING SCOPE: <list>]
   CDK reachable         [OK v<version> | FAIL]
 
 Result: READY  (or)  NEEDS ATTENTION — see fixes below

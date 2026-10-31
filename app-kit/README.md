@@ -250,7 +250,7 @@ claude --plugin-dir <path-to-your-clone>/app-kit
 
 - **AWS org**: management account from `aws.mgt_account_id`; SSO start URL from `aws.sso_start_url`; child accounts named `child-<app>` with role from `aws.sso_role_name` (default `AdministratorAccess`) in `aws.default_region`.
 - **Toolchain**: `mise` pins `node 24.14.0` + `python 3.12`; `AWS_PROFILE` + `AWS_DEFAULT_REGION` exported via `mise.toml`.
-- **Frontend**: Vite + React 18 + TypeScript + Tailwind + shadcn/ui (default) **or** Next.js 15 (static export to the same CDK stack).
+- **Frontend**: Vite + React 19 + TypeScript + Tailwind 4 + shadcn/ui (default) **or** Next.js 15 (static export to the same CDK stack).
 - **Infra**: S3 (private, OAC) + CloudFront + CodeStar Connection + CodeBuild test + CodeBuild build/deploy. Custom domain (ACM cert + Route 53 + www→apex redirect) is optional — picking "skip" in `/new-app` serves the app from CloudFront's default URL instead.
 - **Optional blocks (per app, prompted in `/new-app`):**
   - **Cognito** — UserPool + UserPoolClient with email sign-up, email-verify required, SRP auth flow. On Vite, also drops in shadcn-based SignIn/SignUp/ConfirmSignUp forms, `AuthProvider`, `AuthGuard`, and a `lib/auth.ts` SDK wrapper.

@@ -31,8 +31,8 @@ Ask in **two** AskUserQuestion turns. Split deliberately so creative inputs don'
 **Round 1 — infrastructure shape:**
 
 1. **App name** — kebab-case (e.g., `kanji-trainer`). Used as folder name, AWS profile suffix (`child-<name>`), GitHub repo, and CDK stack id.
-2. **Stack** — `vite` (React 18 SPA, like daily-deutsch) or `nextjs` (Next.js 15 static export to S3/CloudFront).
-3. **Domain** — either an apex domain to register/use (e.g., `kanji-trainer.com`), or **skip**. If skipped, the app is served only from the CloudFront default URL (`d1234.cloudfront.net`) — no Route 53, no ACM cert, no www→apex redirect.
+2. **Stack** — `vite` (React SPA, like daily-deutsch) or `nextjs` (Next.js 15 static export to S3/CloudFront).
+3. **Domain** — an apex domain to **register** (e.g., `kanji-trainer.com`), one the user **already owns** (registered in `mgt`, so skip registration and only delegate DNS), or **skip**. If skipped, the app is served only from the CloudFront default URL (`d1234.cloudfront.net`) — no Route 53, no ACM cert, no www→apex redirect.
 4. **Cognito auth?** — yes/no. Adds a Cognito UserPool + UserPoolClient, plus (for Vite) shadcn-based SignIn/SignUp/ConfirmSignUp forms and an `AuthProvider`/`AuthGuard` in `src/`.
 5. **Protected HTTP API?** — yes/no. Adds an API Gateway HTTP API with a Cognito JWT authorizer and one sample Lambda at `GET /hello`. **Requires Cognito** — if the user picks "API yes / Cognito no," tell them and re-ask.
 6. **LLM Lambda?** — yes/no. The daily-deutsch pattern: unauthenticated Lambda Function URL that proxies Bedrock with CORS only. Independent of Cognito/API.
@@ -51,11 +51,19 @@ Run these in order **after** preflight has passed. After each, give a one-line s
 
 ### 1. Local scaffold + git init (no confirmation needed)
 
-- Confirm `cwd` matches `developer_dir` from config (preflight should have already checked, but re-verify cheaply with `pwd`). Then create `./<app-name>/` relative to `cwd` — **do not** use an absolute hard-coded path; the new project always lives at `./<app-name>` from the configured Developer dir.
-- Inside the new dir: `git init -b main`.
-- Copy `templates/shared/CLAUDE.md`, `templates/shared/mise.toml`, `templates/shared/buildspec.yml`, `templates/shared/buildspec-test.yml`, `templates/shared/.gitignore`, replacing `{{APP_NAME}}`, `{{DOMAIN}}` (empty string if skipped), `{{AWS_PROFILE}}` (set to `child-<app-name>` even though the account doesn't exist yet — first commit ships with the intended value), and `{{BUILD_OUTPUT_DIR}}` (`dist` for Vite, `out` for Next.js).
-- For Vite: `npm create vite@latest . -- --template react-ts`, then add Tailwind 3 + shadcn/ui scaffolding to match the daily-deutsch layout. (Note: `vite create` won't clobber the already-present `CLAUDE.md` etc., but answer "no" if it asks to overwrite.)
-- For Next.js: `npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --no-eslint --import-alias '@/*'`, then set `output: 'export'` in `next.config.ts`.
+- Confirm `cwd` matches `developer_dir` from config (preflight should have already checked, but re-verify cheaply with `pwd`). The project goes in `./<app-name>/` relative to `cwd` — **do not** use an absolute hard-coded path; the new project always lives at `./<app-name>` from the configured Developer dir.
+- For Vite, scaffold first (create-vite wants an empty target dir), from the Developer dir:
+  ```bash
+  CI=1 npm create vite@latest <app-name> -- --template react-ts --no-interactive
+  ```
+  Current create-vite gives React 19, TypeScript 7, oxlint (`npm run lint`), and `erasableSyntaxOnly` in `tsconfig.app.json`. Keep them; don't downgrade to match older apps. Then, in order:
+  1. `npm install tailwindcss @tailwindcss/vite`, add `tailwindcss()` and a `resolve.alias` of `'@' → ./src` to `vite.config.ts`, and set `src/index.css` to `@import "tailwindcss";` (Tailwind 4: no `tailwind.config`).
+  2. Add `"paths": { "@/*": ["./src/*"] }` and `"strict": true` to `tsconfig.app.json` **and** `paths` to `tsconfig.json`. Don't add `baseUrl`, because TypeScript 7 removed it. Edit these files by hand or with a JSONC-aware tool: they contain comments, so `JSON.parse` fails.
+  3. **Only then** run `CI=1 npx shadcn@latest init --yes --defaults`. If the alias isn't in place, shadcn writes `import { cn } from "cn"` into `components/ui/button.tsx`. Grep for it and fix it if it shows up.
+  4. shadcn's default theme imports `@fontsource-variable/geist`. If you switch fonts, remove that `@import` from `src/index.css` too, or the build fails.
+  5. Delete the Vite boilerplate (`src/App.css`, `src/assets/*`, `public/icons.svg`) and replace `public/favicon.svg`.
+- For Next.js: create `./<app-name>/` and, inside it, `npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --no-eslint --import-alias '@/*'`, then set `output: 'export'` in `next.config.ts`.
+- Then, inside `./<app-name>/`: `git init -b main` and copy `templates/shared/CLAUDE.md`, `templates/shared/mise.toml`, `templates/shared/buildspec.yml`, `templates/shared/buildspec-test.yml`, `templates/shared/.gitignore`, replacing `{{APP_NAME}}`, `{{DOMAIN}}` (empty string if skipped), `{{AWS_PROFILE}}` (set to `child-<app-name>` even though the account doesn't exist yet — first commit ships with the intended value), `{{BUILD_OUTPUT_DIR}}` (`dist` for Vite, `out` for Next.js), `{{GITHUB_OWNER}}` (`github.org` from config), and in `CLAUDE.md` `{{APP_DESCRIPTION}}` (from round 2) and `{{ARCHITECTURE_NOTES}}` (write these after step 1b, once the code exists). Merge `.gitignore` with the one the scaffolder wrote rather than overwriting it.
 - Copy `templates/<stack>/cdk/` into `./<app>/cdk/`. **Rename `lib/stack.ts` to `lib/<app-name>-stack.ts`.** Strip the block markers per the matrix in the `cdk-stack` skill, but **leave `{{AWS_ACCOUNT_ID}}` as-is in `cdk/bin/app.ts`** — we don't have the real ID yet; step 3 will fill it in.
 
 ### 1b. First-cut implementation from description + design refs (no confirmation)
@@ -71,9 +79,10 @@ This is what makes the initial commit *meaningful* instead of "Vite scaffold + m
    The `frontend-design` skill should produce a credible first iteration — real pages, real typed data shapes, real interactions — not stub pages.
 
 3. **Constraints to enforce when delegating:**
-   - Stay within the round-1 stack (Vite + React 18 OR Next.js 15).
+   - Stay within the round-1 stack (Vite + React OR Next.js 15).
    - Use shadcn/ui primitives in `src/components/ui/`; install via `npx shadcn@latest add <name>` as needed.
-   - Use Tailwind for layout; only customize `tailwind.config` for the extracted palette/fonts.
+   - Use Tailwind for layout; put the extracted palette/fonts in `@theme` tokens in `src/index.css` (Tailwind 4) or `tailwind.config` (Next.js, if it ships Tailwind 3).
+   - Placeholder content: don't invent real-world facts, quotes, prices or stats that would go live on a public domain. Use clearly marked placeholders, as the design reference does.
    - **Don't** add features round 1 didn't authorize. If Cognito=no, the first cut must work without auth. If API=no, all data must be client-side (typed arrays or `localStorage`).
    - Keep it tight — ~5–10 files of real app code, not a full product.
 
@@ -103,6 +112,8 @@ Then **back in the app directory**: replace `{{AWS_ACCOUNT_ID}}` in `cdk/bin/app
 ### 4. Route 53 domain — **skip entirely if the user opted out**
 
 If the user picked **skip** for the domain, do nothing here and proceed to step 5.
+
+If the user **already owns** the domain, skip the `domain` skill's availability and registration steps and run its "Existing domain" path: hosted zone in the child account, then name-server delegation. Changing a live domain's name servers is outward-facing, so confirm with the user first.
 
 Otherwise, defer to the `domain` skill. Check availability with `aws route53domains check-domain-availability`, **quote the annual price** from `get-domain-suggestions`, and only register after explicit user OK. Registration runs in the management account (`AWS_PROFILE=mgt`) because that's where billing lives, but the hosted zone is created in the **child** account so the CDK stack there can look it up.
 

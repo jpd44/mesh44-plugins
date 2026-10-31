@@ -8,6 +8,19 @@ description: Check Route 53 domain availability, register if approved, and set u
 
 Domain **registration** lives in the management account (`mgt`, ID from `aws.mgt_account_id` in `~/.config/mesh44/config.json`) for consolidated billing. The **hosted zone** the CDK stack uses lives in the **child** account so the stack can `route53.HostedZone.fromLookup` it without cross-account roles. We bridge them with an NS delegation.
 
+## Existing domain (already registered in `mgt`)
+
+When the user already owns the domain, skip steps 1–2 and confirm it first:
+
+```bash
+AWS_PROFILE=mgt aws route53domains list-domains --region us-east-1 \
+  --query "Domains[?DomainName=='$DOMAIN']"
+```
+
+Right after a registration, `get-domain-detail` can still say "Domain … not found in account" for a while, even though `list-domains` and `list-operations` show it. Check `list-operations` for a `SUCCESSFUL` `REGISTER_DOMAIN` before concluding that it's registered somewhere else. If it isn't in `mgt` at all, ask the user which account holds it: delegation from another registrar means setting NS records there by hand.
+
+Then run steps 3–6. Changing a live domain's name servers is outward-facing, so confirm with the user before step 5.
+
 ## Steps
 
 ### 1. Check availability
@@ -84,6 +97,15 @@ AWS_PROFILE=mgt aws route53domains update-domain-nameservers \
 ```
 
 This makes the child zone authoritative for the public internet — the registrar delegates straight to it, no extra hop.
+
+Pass the four names as literal arguments. Don't build them from an unquoted variable such as `--nameservers $ARGS`: the user's shell is zsh, which doesn't word-split variables, so the CLI gets one malformed argument (`Expected: '=', received: 'N'`). To build them from the `get-hosted-zone` output, use an array:
+
+```bash
+NS=($(AWS_PROFILE=child-<app-name> aws route53 get-hosted-zone --id "$ZONE_ID" \
+  --query 'DelegationSet.NameServers' --output text))
+AWS_PROFILE=mgt aws route53domains update-domain-nameservers --region us-east-1 \
+  --domain-name "$DOMAIN" --nameservers "${NS[@]/#/Name=}"
+```
 
 ### 6. Verify
 

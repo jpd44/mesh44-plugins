@@ -87,7 +87,9 @@ npm install amazon-cognito-identity-js
 npx shadcn@latest add button input label card
 ```
 
-Edit `src/App.tsx` to wrap the existing root in `<AuthProvider><AuthGuard>…</AuthGuard></AuthProvider>` (imports from `@/components/AuthProvider` and `@/components/AuthGuard`). If `App.tsx` is non-trivial, show the diff and confirm with the user before writing.
+Wire auth into `src/App.tsx` per `templates/vite/frontend/README.md`. **Don't wrap the whole app by default.** A private tool gets `<AuthProvider><AuthGuard>…</AuthGuard></AuthProvider>` around the root. A public site gets a lazy-loaded, guarded route (e.g. `/account`, `/editor`) so visitors never hit a sign-in wall and public pages don't load the Cognito SDK. If the app description doesn't make clear which it is, ask. If `App.tsx` is non-trivial, show the diff and confirm with the user before writing.
+
+**Self sign-up:** the template's user pool has `selfSignUpEnabled: true`. That's right for consumer accounts, but wrong when the signed-in area is staff-only (editors, admins), because anyone could register. In that case, ask the user whether to set it to `false` and create users in the Cognito console, and do that before the first deploy.
 
 For the **Next.js** stack, **don't auto-copy the components** — they need `"use client"` directives and a layout-level wrapper. Print a note pointing the user to `templates/vite/frontend/` as a starting point and the instructions in `templates/nextjs/README.md`.
 
@@ -123,6 +125,9 @@ AWS_PROFILE=child-<app-name> npx cdk deploy --require-approval broadening
 - Tell the user to push any change to `main` to trigger the first end-to-end pipeline run.
 
 ## Troubleshooting cribs
+
+- `Cannot find module 'aws-lambda'` from `lambda/hello-protected/index.ts` → `npm install -D @types/aws-lambda` in `cdk/` (the template ships it since 0.1.1).
+- `HostedZone.fromLookup` fails at synth with "Found zones: []" → the child-account hosted zone doesn't exist yet. Run the `domain` skill's zone + delegation steps before `cdk diff`.
 
 - `Cannot find module 'aws-cdk-lib'` → forgot `npm install` in `cdk/`.
 - `User is not authorized to perform: sts:AssumeRole` on bootstrap → SSO token expired; `aws sso login --profile child-<app-name>`.
