@@ -87,6 +87,15 @@ npm install amazon-cognito-identity-js
 npx shadcn@latest add button input label card
 ```
 
+**Required Vite fix:** `amazon-cognito-identity-js` reads Node's `global`, which browsers don't have. Without this, every page that loads the SDK renders blank with `ReferenceError: global is not defined`, and only in the production build. Add to `vite.config.ts`:
+
+```ts
+// amazon-cognito-identity-js reads Node's `global`; browsers only have globalThis.
+define: { global: 'globalThis' },
+```
+
+Check it by loading the signed-in route from `npm run build && npx vite preview`, not only the home page.
+
 Wire auth into `src/App.tsx` per `templates/vite/frontend/README.md`. **Don't wrap the whole app by default.** A private tool gets `<AuthProvider><AuthGuard>…</AuthGuard></AuthProvider>` around the root. A public site gets a lazy-loaded, guarded route (e.g. `/account`, `/editor`) so visitors never hit a sign-in wall and public pages don't load the Cognito SDK. If the app description doesn't make clear which it is, ask. If `App.tsx` is non-trivial, show the diff and confirm with the user before writing.
 
 **Self sign-up:** the template's user pool has `selfSignUpEnabled: true`. That's right for consumer accounts, but wrong when the signed-in area is staff-only (editors, admins), because anyone could register. In that case, ask the user whether to set it to `false` and create users in the Cognito console, and do that before the first deploy.

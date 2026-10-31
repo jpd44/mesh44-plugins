@@ -21,6 +21,15 @@ These files get copied into the new app's `src/` when **Cognito** is selected in
 npm i amazon-cognito-identity-js
 ```
 
+**Required Vite fix:** `amazon-cognito-identity-js` reads Node's `global`, which browsers don't have. Without this, every page that loads the SDK renders blank with `ReferenceError: global is not defined`, and only in the production build. Add to `vite.config.ts`:
+
+```ts
+// amazon-cognito-identity-js reads Node's `global`; browsers only have globalThis.
+define: { global: 'globalThis' },
+```
+
+Check it by loading the signed-in route from `npm run build && npx vite preview`, not only the home page.
+
 ## Required shadcn primitives
 
 ```bash

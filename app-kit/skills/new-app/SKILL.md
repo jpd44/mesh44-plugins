@@ -57,7 +57,7 @@ Run these in order **after** preflight has passed. After each, give a one-line s
   CI=1 npm create vite@latest <app-name> -- --template react-ts --no-interactive
   ```
   Current create-vite gives React 19, TypeScript 7, oxlint (`npm run lint`), and `erasableSyntaxOnly` in `tsconfig.app.json`. Keep them; don't downgrade to match older apps. Then, in order:
-  1. `npm install tailwindcss @tailwindcss/vite`, add `tailwindcss()` and a `resolve.alias` of `'@' → ./src` to `vite.config.ts`, and set `src/index.css` to `@import "tailwindcss";` (Tailwind 4: no `tailwind.config`).
+  1. `npm install tailwindcss @tailwindcss/vite`, add `tailwindcss()` and a `resolve.alias` of `'@' → ./src` to `vite.config.ts`, and set `src/index.css` to `@import "tailwindcss";` (Tailwind 4: no `tailwind.config`). If Cognito is on, also add `define: { global: 'globalThis' }` (see the `cdk-stack` skill's Cognito step).
   2. Add `"paths": { "@/*": ["./src/*"] }` and `"strict": true` to `tsconfig.app.json` **and** `paths` to `tsconfig.json`. Don't add `baseUrl`, because TypeScript 7 removed it. Edit these files by hand or with a JSONC-aware tool: they contain comments, so `JSON.parse` fails.
   3. **Only then** run `CI=1 npx shadcn@latest init --yes --defaults`. If the alias isn't in place, shadcn writes `import { cn } from "cn"` into `components/ui/button.tsx`. Grep for it and fix it if it shows up.
   4. shadcn's default theme imports `@fontsource-variable/geist`. If you switch fonts, remove that `@import` from `src/index.css` too, or the build fails.
