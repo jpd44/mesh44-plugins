@@ -255,7 +255,7 @@ claude --plugin-dir <path-to-your-clone>/app-kit
 - **Optional blocks (per app, prompted in `/new-app`):**
   - **Cognito** — UserPool + UserPoolClient with email sign-up, email-verify required, SRP auth flow. On Vite, also drops in shadcn-based SignIn/SignUp/ConfirmSignUp forms, `AuthProvider`, `AuthGuard`, and a `lib/auth.ts` SDK wrapper.
   - **Protected HTTP API** — API Gateway HTTP API + `HttpJwtAuthorizer` against the user pool + sample `GET /hello` Lambda. Frontend gets `lib/api.ts` with `apiFetch()` that auto-attaches the ID token. Requires Cognito.
-  - **LLM Lambda** — daily-deutsch-style unauthenticated Lambda Function URL that proxies Bedrock. CORS-only, no JWT. Independent of Cognito/API.
+  - **LLM Lambda** — Lambda that proxies Bedrock. With the protected HTTP API on, it is `POST /llm` behind the JWT authorizer (recommended). Without the API, it falls back to the daily-deutsch-style unauthenticated Function URL (CORS-only, no JWT).
 - **GitHub**: org from `github.org`, default branch `main`, private.
 
 See each skill's `SKILL.md` for the step-by-step behavior the model follows.

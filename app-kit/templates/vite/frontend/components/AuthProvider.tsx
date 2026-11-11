@@ -21,12 +21,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const user = getCurrentUser();
-      const session = await getSession();
-      if (user && session?.isValid()) {
-        setEmail(user.getUsername());
+      try {
+        const user = getCurrentUser();
+        const session = await getSession();
+        if (user && session?.isValid()) {
+          setEmail(user.getUsername());
+        }
+      } catch (err) {
+        // Missing pool config (before the first deploy) or a corrupt stored session: show sign-in.
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
   }, []);
 

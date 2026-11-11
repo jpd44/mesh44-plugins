@@ -92,3 +92,16 @@ After the first `cdk deploy`, copy `.env.example` to `.env.local` and fill in th
 AWS_PROFILE=child-<app> aws cloudformation describe-stacks --stack-name <Pascal>Stack \
   --query 'Stacks[0].Outputs[?OutputKey==`UserPoolId` || OutputKey==`UserPoolClientId` || OutputKey==`ApiUrl`]'
 ```
+
+## Calling the LLM Lambda (when the API is on)
+
+With the protected API enabled, the Bedrock Lambda is `POST /llm` behind the same JWT authorizer, so call it through `apiFetch` like any other route:
+
+```tsx
+const { text } = await apiFetch<{ text: string }>("/llm", {
+  method: "POST",
+  body: JSON.stringify({ prompt }),
+});
+```
+
+The template Lambda forwards `prompt` as-is. For a real feature, build the prompt server-side from bounded fields instead (see reelpostcard's `/caption`), so signed-in users can't use it as a general-purpose LLM.

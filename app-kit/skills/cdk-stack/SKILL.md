@@ -12,7 +12,7 @@ From the orchestrator: `app_name`, `aws_account_id`, `github_owner` (defaults to
 
 - `needs_cognito` (bool) — adds Cognito UserPool + UserPoolClient
 - `needs_api` (bool) — adds HTTP API Gateway + JWT authorizer + sample protected Lambda. Requires `needs_cognito=true`; refuse otherwise.
-- `needs_llm_lambda` (bool) — adds the daily-deutsch-style unauth'd Bedrock Lambda Function URL
+- `needs_llm_lambda` (bool) — adds a Bedrock-proxy Lambda. With `needs_api=true` it is routed as `POST /llm` through the JWT authorizer (no public URL). With `needs_api=false` it gets the daily-deutsch-style unauthenticated Function URL.
 
 If `domain` is null the app is served from the CloudFront default URL only (no Route 53, no ACM cert, no www→apex redirect).
 
@@ -37,9 +37,13 @@ Pick `templates/vite/cdk/` or `templates/nextjs/cdk/` based on the user's stack 
 | --- | --- | --- |
 | `domain` is a string | `BEGIN_DOMAIN` / `END_DOMAIN` | `BEGIN_NO_DOMAIN` / `END_NO_DOMAIN` |
 | `domain` is null | `BEGIN_NO_DOMAIN` / `END_NO_DOMAIN` | `BEGIN_DOMAIN` / `END_DOMAIN` |
-| `needs_llm_lambda=false` | — | `BEGIN_LLM_LAMBDA` / `END_LLM_LAMBDA` (all occurrences). Also delete `lambda/llm/` directory. |
+| `needs_llm_lambda=false` | — | `BEGIN_LLM_LAMBDA` / `END_LLM_LAMBDA` **and** `BEGIN_LLM_API` / `END_LLM_API` (all occurrences). Also delete `lambda/llm/` directory. |
+| `needs_llm_lambda=true`, `needs_api=true` | `BEGIN_LLM_API` / `END_LLM_API` | `BEGIN_LLM_PUBLIC` / `END_LLM_PUBLIC` (removes the Function URL, `VITE_LLM_URL`, and the `LlmUrl` output). |
+| `needs_llm_lambda=true`, `needs_api=false` | `BEGIN_LLM_PUBLIC` / `END_LLM_PUBLIC` | `BEGIN_LLM_API` / `END_LLM_API` |
 | `needs_cognito=false` | — | `BEGIN_COGNITO` / `END_COGNITO` (all occurrences). |
-| `needs_api=false` | — | `BEGIN_API` / `END_API` (all occurrences). Also delete `lambda/hello-protected/` directory. |
+| `needs_api=false` | — | `BEGIN_API` / `END_API` and `BEGIN_LLM_API` / `END_LLM_API` (all occurrences). Also delete `lambda/hello-protected/` directory. |
+
+`LLM_PUBLIC` is nested inside `LLM_LAMBDA`, and `LLM_API` inside `API`; stripping an outer block removes the inner one with it. `LLM_API` references `llmFn`, so it must never survive without `LLM_LAMBDA`.
 
 **Important: `DOMAIN` and `NO_DOMAIN` are an XOR pair.** Exactly one must remain in the rendered file. If both stay, you'll get `Identifier 'allowedOrigins' has already been declared` from TypeScript. If neither stays, the file won't compile because `allowedOrigins` is referenced.
 
@@ -128,7 +132,7 @@ AWS_PROFILE=child-<app-name> npx cdk deploy --require-approval broadening
 ### 6. Post-deploy
 
 - Print the `AuthorizeConnectionUrl` CloudFormation output. **The user must click through this and authorize the GitHub app** before the pipeline can pull source. The connection sits in `PENDING` until they do.
-- Print every applicable output: `SiteUrl`, `DistributionId`, `BucketName`, plus `LlmUrl` / `UserPoolId` + `UserPoolClientId` / `ApiUrl` depending on toggles. The build project already has these wired into its env vars; no manual export needed for CI builds.
+- Print every applicable output: `SiteUrl`, `DistributionId`, `BucketName`, plus `LlmUrl` (public-LLM variant only) / `UserPoolId` + `UserPoolClientId` / `ApiUrl` depending on toggles. The build project already has these wired into its env vars; no manual export needed for CI builds.
 - If `needs_cognito=true`, write a `.env.local` in the app root with `VITE_AWS_REGION`, `VITE_USER_POOL_ID`, `VITE_USER_POOL_CLIENT_ID`, and (if `needs_api`) `VITE_API_URL` filled from the CloudFormation outputs, so local dev works immediately.
 - If `domain` is null, the `SiteUrl` output will be the CloudFront default domain (e.g., `https://d1234.cloudfront.net`). Print it to the user and note that they can later attach a real domain by pasting the `BEGIN_DOMAIN` block markers back in and uncommenting their `bin/app.ts` `domainName` prop.
 - Tell the user to push any change to `main` to trigger the first end-to-end pipeline run.

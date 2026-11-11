@@ -35,7 +35,7 @@ Ask in **two** AskUserQuestion turns. Split deliberately so creative inputs don'
 3. **Domain** — an apex domain to **register** (e.g., `kanji-trainer.com`), one the user **already owns** (registered in `mgt`, so skip registration and only delegate DNS), or **skip**. If skipped, the app is served only from the CloudFront default URL (`d1234.cloudfront.net`) — no Route 53, no ACM cert, no www→apex redirect.
 4. **Cognito auth?** — yes/no. Adds a Cognito UserPool + UserPoolClient, plus (for Vite) shadcn-based SignIn/SignUp/ConfirmSignUp forms and an `AuthProvider`/`AuthGuard` in `src/`.
 5. **Protected HTTP API?** — yes/no. Adds an API Gateway HTTP API with a Cognito JWT authorizer and one sample Lambda at `GET /hello`. **Requires Cognito** — if the user picks "API yes / Cognito no," tell them and re-ask.
-6. **LLM Lambda?** — yes/no. The daily-deutsch pattern: unauthenticated Lambda Function URL that proxies Bedrock with CORS only. Independent of Cognito/API.
+6. **LLM Lambda?** — yes/no. A Lambda that proxies Bedrock. **With the protected API (5) on, it is mounted as `POST /llm` behind the Cognito JWT authorizer and has no public URL. This is the default; recommend it.** Without the API, it falls back to the daily-deutsch pattern: an *unauthenticated* Lambda Function URL with CORS only. Anyone who finds that URL can spend Bedrock tokens, so say this when the user picks LLM without the API, and offer to turn on Cognito + API instead.
 
 Treat 4/5/6 as three separate toggles. Don't bundle them.
 
@@ -59,7 +59,15 @@ Run these in order **after** preflight has passed. After each, give a one-line s
   Current create-vite gives React 19, TypeScript 7, oxlint (`npm run lint`), and `erasableSyntaxOnly` in `tsconfig.app.json`. Keep them; don't downgrade to match older apps. Then, in order:
   1. `npm install tailwindcss @tailwindcss/vite`, add `tailwindcss()` and a `resolve.alias` of `'@' → ./src` to `vite.config.ts`, and set `src/index.css` to `@import "tailwindcss";` (Tailwind 4: no `tailwind.config`). If Cognito is on, also add `define: { global: 'globalThis' }` (see the `cdk-stack` skill's Cognito step).
   2. Add `"paths": { "@/*": ["./src/*"] }` and `"strict": true` to `tsconfig.app.json` **and** `paths` to `tsconfig.json`. Don't add `baseUrl`, because TypeScript 7 removed it. Edit these files by hand or with a JSONC-aware tool: they contain comments, so `JSON.parse` fails.
-  3. **Only then** run `CI=1 npx shadcn@latest init --yes --defaults`. If the alias isn't in place, shadcn writes `import { cn } from "cn"` into `components/ui/button.tsx`. Grep for it and fix it if it shows up.
+  3. **Only then** run `CI=1 npx shadcn@latest init --yes --defaults`. Even with the alias in place, current shadcn can write `import { cn } from "cn"` (and `export { cn } from "cn"` in `src/lib/utils.ts`) **and** add the unrelated `cn` npm package to `dependencies`. Always check and repair it:
+     ```bash
+     if grep -rq 'from "cn"' src || grep -q '"cn":' package.json; then
+       npm uninstall cn && npm install clsx tailwind-merge
+       printf '%s\n' 'import { clsx, type ClassValue } from "clsx"' 'import { twMerge } from "tailwind-merge"' '' 'export function cn(...inputs: ClassValue[]) {' '  return twMerge(clsx(inputs))' '}' > src/lib/utils.ts
+       grep -rl 'from "cn"' src/components | xargs sed -i '' 's#from "cn"#from "@/lib/utils"#'
+     fi
+     ```
+     Re-run the `grep` after every `npx shadcn@latest add`, since new components can bring the bad import back.
   4. shadcn's default theme imports `@fontsource-variable/geist`. If you switch fonts, remove that `@import` from `src/index.css` too, or the build fails.
   5. Delete the Vite boilerplate (`src/App.css`, `src/assets/*`, `public/icons.svg`) and replace `public/favicon.svg`.
 - For Next.js: create `./<app-name>/` and, inside it, `npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --no-eslint --import-alias '@/*'`, then set `output: 'export'` in `next.config.ts`.

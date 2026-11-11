@@ -131,7 +131,7 @@ function handler(event) {
     new route53.AaaaRecord(this, "WwwAAAA", { zone: hostedZone, recordName: wwwDomain, target: cfTarget });
     // END_DOMAIN
 
-    // Allowed origins for any CORS-aware backend (LLM Lambda, HTTP API).
+    // Allowed origins for any CORS-aware backend (LLM Function URL, HTTP API).
     // BEGIN_DOMAIN
     const allowedOrigins = [`https://${domainName}`, `https://${wwwDomain}`, "http://localhost:5173"];
     // END_DOMAIN
@@ -202,6 +202,9 @@ function handler(event) {
       }),
     );
 
+    // BEGIN_LLM_PUBLIC
+    // Unauthenticated: anyone who finds this URL can spend Bedrock tokens. Only used when
+    // there is no HTTP API; with the API, the LLM_API block routes it through the JWT authorizer.
     const llmUrl = llmFn.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
       cors: {
@@ -211,6 +214,7 @@ function handler(event) {
         maxAge: cdk.Duration.days(1),
       },
     });
+    // END_LLM_PUBLIC
     // END_LLM_LAMBDA
 
     // BEGIN_API
@@ -248,6 +252,15 @@ function handler(event) {
       methods: [HttpMethod.GET],
       integration: new HttpLambdaIntegration("HelloIntegration", helloProtectedFn),
     });
+
+    // BEGIN_LLM_API
+    // Bedrock is only reachable through the JWT-authorized API; no public Function URL.
+    httpApi.addRoutes({
+      path: "/llm",
+      methods: [HttpMethod.POST],
+      integration: new HttpLambdaIntegration("LlmIntegration", llmFn),
+    });
+    // END_LLM_API
     // END_API
 
     const testProject = new codebuild.PipelineProject(this, "TestProject", {
@@ -267,7 +280,9 @@ function handler(event) {
         BUCKET_NAME: { value: siteBucket.bucketName },
         DISTRIBUTION_ID: { value: distribution.distributionId },
         // BEGIN_LLM_LAMBDA
+        // BEGIN_LLM_PUBLIC
         VITE_LLM_URL: { value: llmUrl.url },
+        // END_LLM_PUBLIC
         // END_LLM_LAMBDA
         // BEGIN_COGNITO
         VITE_USER_POOL_ID: { value: userPool.userPoolId },
@@ -341,7 +356,9 @@ function handler(event) {
     new cdk.CfnOutput(this, "DistributionId", { value: distribution.distributionId });
     new cdk.CfnOutput(this, "BucketName", { value: siteBucket.bucketName });
     // BEGIN_LLM_LAMBDA
+    // BEGIN_LLM_PUBLIC
     new cdk.CfnOutput(this, "LlmUrl", { value: llmUrl.url });
+    // END_LLM_PUBLIC
     // END_LLM_LAMBDA
     // BEGIN_COGNITO
     new cdk.CfnOutput(this, "UserPoolId", { value: userPool.userPoolId });
