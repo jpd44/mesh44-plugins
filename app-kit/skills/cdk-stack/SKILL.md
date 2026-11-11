@@ -79,10 +79,11 @@ For the **Vite** stack, copy from `templates/vite/frontend/`:
 | `lib/api.ts` | `<app>/src/lib/api.ts` (only if `needs_api=true`) |
 | `components/AuthProvider.tsx` | `<app>/src/components/AuthProvider.tsx` |
 | `components/AuthGuard.tsx` | `<app>/src/components/AuthGuard.tsx` |
-| `components/SignInForm.tsx` | `<app>/src/components/SignInForm.tsx` |
-| `components/SignUpForm.tsx` | `<app>/src/components/SignUpForm.tsx` |
-| `components/ConfirmSignUpForm.tsx` | `<app>/src/components/ConfirmSignUpForm.tsx` |
-| `components/ForgotPasswordForm.tsx` | `<app>/src/components/ForgotPasswordForm.tsx` |
+| `components/LoginForm.tsx` | `<app>/src/components/LoginForm.tsx` |
+| `components/UserMenu.tsx` | `<app>/src/components/UserMenu.tsx` |
+| `components/AccountView.tsx` | `<app>/src/components/AccountView.tsx` |
+| `components/SignedInShell.tsx` | `<app>/src/components/SignedInShell.tsx` |
+| `pages/AccountPage.tsx` | `<app>/src/pages/AccountPage.tsx` (replace `{{APP_NAME}}`) |
 | `.env.example` | `<app>/.env.example` (merge if one already exists) |
 
 Then in the new app's root:
@@ -101,9 +102,9 @@ define: { global: 'globalThis' },
 
 Check it by loading the signed-in route from `npm run build && npx vite preview`, not only the home page.
 
-Wire auth into `src/App.tsx` per `templates/vite/frontend/README.md`. **Don't wrap the whole app by default.** A private tool gets `<AuthProvider><AuthGuard>…</AuthGuard></AuthProvider>` around the root. A public site gets a lazy-loaded, guarded route (e.g. `/account`, `/editor`) so visitors never hit a sign-in wall and public pages don't load the Cognito SDK. If the app description doesn't make clear which it is, ask. If `App.tsx` is non-trivial, show the diff and confirm with the user before writing.
+Wire auth into `src/App.tsx` per `templates/vite/frontend/README.md`. **Use these components by default; don't hand-roll login forms or a sign-out button.** Every signed-in page renders inside `<SignedInShell appName="<app-name>">`, which puts the account dropdown (avatar + email, Profile, Change password, Sign out) in the top-right corner, and the app gets an `/account` route (`pages/AccountPage.tsx`). **Don't wrap the whole app by default.** A private tool wraps its root in `SignedInShell`. A public site gets a lazy-loaded, guarded route (e.g. `/account`, `/editor`) so visitors never hit a sign-in wall and public pages don't load the Cognito SDK. If the app description doesn't make clear which it is, ask. If `App.tsx` is non-trivial, show the diff and confirm with the user before writing.
 
-**Self sign-up:** the template's user pool has `selfSignUpEnabled: true`. That's right for consumer accounts, but wrong when the signed-in area is staff-only (editors, admins), because anyone could register. In that case, ask the user whether to set it to `false` and create users in the Cognito console, and do that before the first deploy.
+**Self sign-up:** the template's user pool has `selfSignUpEnabled: true`. That's right for consumer accounts, but wrong when the signed-in area is staff-only (editors, admins), because anyone could register. In that case, ask the user whether to set it to `false` and create users in the Cognito console, and do that before the first deploy. When it's `false`, pass `allowSignUp={false}` to every `SignedInShell` (hides "Create an account", and the login card handles the invite's temporary-password step).
 
 For the **Next.js** stack, **don't auto-copy the components** — they need `"use client"` directives and a layout-level wrapper. Print a note pointing the user to `templates/vite/frontend/` as a starting point and the instructions in `templates/nextjs/README.md`.
 

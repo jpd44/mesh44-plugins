@@ -1,22 +1,25 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "./AuthProvider";
-import { SignInForm } from "./SignInForm";
+import { LoginForm } from "./LoginForm";
 
-export function AuthGuard({ children }: { children: ReactNode }) {
+/** Renders children when signed in; otherwise the login card. `login` configures it (appName, icon, allowSignUp). */
+export function AuthGuard({ children, login }: { children: ReactNode; login: ComponentProps<typeof LoginForm> }) {
   const { email, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
-        Loading…
+      <div className="flex min-h-svh items-center justify-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        Checking your session…
       </div>
     );
   }
 
   if (!email) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <SignInForm />
+      <div className="flex min-h-svh items-center justify-center p-4">
+        <LoginForm {...login} />
       </div>
     );
   }

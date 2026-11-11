@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { CognitoUser } from "amazon-cognito-identity-js";
 import {
+  completeNewPassword as cognitoCompleteNewPassword,
   getCurrentUser,
   getSession,
   signIn as cognitoSignIn,
@@ -10,6 +12,7 @@ type AuthState = {
   email: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  completeNewPassword: (user: CognitoUser, newPassword: string) => Promise<void>;
   signOut: () => void;
 };
 
@@ -44,6 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn: async (e, p) => {
           await cognitoSignIn(e, p);
           setEmail(e);
+        },
+        completeNewPassword: async (user, newPassword) => {
+          await cognitoCompleteNewPassword(user, newPassword);
+          setEmail(user.getUsername());
         },
         signOut: () => {
           cognitoSignOut();
