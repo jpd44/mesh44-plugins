@@ -1,6 +1,6 @@
 # Frontend auth bundle
 
-These files get copied into the new app's `src/` when **Cognito** is selected in `/app-kit:new-app`. They wire up Cognito user pools to the daily-deutsch-style auth UI (one `LoginForm` card for sign in, sign up, email confirmation, forgot/reset password and the invite new-password step; a `UserMenu` avatar dropdown for the top-right of the header; an `AccountView` profile page with change password) and provide an `apiFetch` helper that attaches the user's ID token to every protected request.
+These files get copied into the new app's `src/` when **Cognito** is selected in `/app-kit:new-app`. They wire up Cognito user pools to a ready-made auth UI (one `LoginForm` card for sign in, sign up, email confirmation, forgot/reset password and the invite new-password step; a `UserMenu` avatar dropdown for the top-right of the header; an `AccountView` profile page with change password) and provide an `apiFetch` helper that attaches the user's ID token to every protected request.
 
 ## What gets copied where
 
@@ -112,4 +112,4 @@ const { text } = await apiFetch<{ text: string }>("/llm", {
 });
 ```
 
-The template Lambda forwards `prompt` as-is. For a real feature, build the prompt server-side from bounded fields instead (see reelpostcard's `/caption`), so signed-in users can't use it as a general-purpose LLM.
+The template Lambda forwards `prompt` as-is. For a real feature, build the prompt server-side from bounded fields instead (e.g. a `/caption` route that takes `place` and `tone` and writes the prompt itself), so signed-in users can't use it as a general-purpose LLM.

@@ -17,7 +17,7 @@ import { useAuth } from "./AuthProvider";
 type Mode = "signIn" | "signUp" | "confirm" | "forgot" | "resetPassword" | "newPassword";
 
 type Props = {
-  /** Shown in the subheading, e.g. "Sign in to reelpostcard". */
+  /** Shown in the subheading, e.g. "Sign in to my-app.". */
   appName: string;
   /** Badge at the top of the card. */
   icon?: ReactNode;
