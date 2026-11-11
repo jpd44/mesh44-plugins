@@ -147,15 +147,19 @@ Domain registration is billable. The first time you register a domain, AWS will 
 
 You can skip this entirely — the plugin will happily serve apps from CloudFront default URLs (`d1234.cloudfront.net`) if you tell `/new-app` "no domain."
 
-### 7. Optional: Bedrock model access (only if you select the LLM Lambda block)
+### 7. Optional: Bedrock access (only if you select the LLM Lambda block)
 
-The LLM Lambda template proxies Bedrock's Anthropic models. Bedrock requires a one-time, per-account **model access** opt-in:
+The per-model **Model access** page has been retired: serverless foundation models are enabled automatically the first time they're invoked in an account. Two things can still block the first call:
 
-1. After `/new-app` creates the child account, `aws sso login --profile child-<app>`.
-2. Open <https://console.aws.amazon.com/bedrock/home#/modelaccess> in the child account.
-3. Request access to the `Claude Haiku 4.5` model (or whatever the template references). Approval is usually instant.
+1. **New-account verification.** A freshly created child account returns `AccessDeniedException: Your account is currently being verified` from Bedrock for up to ~2 hours. Nothing to do but wait; re-test afterwards.
+2. **Anthropic use-case form.** For Anthropic models, first-time users may be asked to submit use-case details (in the Bedrock console model catalog / playground) before the model works. If the error mentions use-case details, open the model in the playground in the child account and submit the form.
 
-The plugin can't do this for you — it's a console-only flow.
+Smoke-test without signing in by invoking the Lambda directly:
+
+```bash
+AWS_PROFILE=child-<app> aws lambda invoke --function-name <LlmFn name> \
+  --cli-binary-format raw-in-base64-out --payload '{"body":"{\"prompt\":\"hi\"}"}' /tmp/out.json && cat /tmp/out.json
+```
 
 ---
 

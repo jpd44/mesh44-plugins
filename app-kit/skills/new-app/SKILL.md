@@ -134,7 +134,7 @@ If `needs_cognito=true`, also write `.env.local` from the stack outputs and comm
 ### 6. Wrap up
 
 - Open the new project in the user's editor (`code <path>` if VS Code is installed; otherwise just print the path).
-- Print a final checklist: authorize CodeStar connection, push any change to `main` to verify the pipeline runs end-to-end, enable Bedrock model access in the new account if the LLM Lambda was selected.
+- Print a final checklist: authorize CodeStar connection, push any change to `main` to verify the pipeline runs end-to-end, if the LLM Lambda was selected, note that a brand-new account returns Bedrock `AccessDeniedException: …being verified` for up to ~2 hours (wait it out), and Anthropic models may ask for a one-time use-case form in the Bedrock console. The old per-model "Model access" page is retired; models auto-enable on first invoke.
 
 ## Guardrails
 
