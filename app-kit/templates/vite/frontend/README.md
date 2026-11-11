@@ -13,6 +13,7 @@ These files get copied into the new app's `src/` when **Cognito** is selected in
 | `components/SignInForm.tsx` | `src/components/SignInForm.tsx` |
 | `components/SignUpForm.tsx` | `src/components/SignUpForm.tsx` |
 | `components/ConfirmSignUpForm.tsx` | `src/components/ConfirmSignUpForm.tsx` |
+| `components/ForgotPasswordForm.tsx` | `src/components/ForgotPasswordForm.tsx` |
 | `.env.example` | `.env.example` (merge with any existing file) |
 
 ## Required npm deps (the orchestrator installs these)

@@ -48,6 +48,27 @@ export function resendConfirmationCode(email: string): Promise<void> {
   });
 }
 
+// Sends a reset code to the user's email. With preventUserExistenceErrors on the pool
+// client, unknown emails resolve too, so the UI shouldn't claim the account exists.
+export function forgotPassword(email: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    new CognitoUser({ Username: email, Pool: userPool() }).forgotPassword({
+      onSuccess: () => resolve(),
+      onFailure: (err) => reject(err),
+      inputVerificationCode: () => resolve(),
+    });
+  });
+}
+
+export function confirmPassword(email: string, code: string, newPassword: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    new CognitoUser({ Username: email, Pool: userPool() }).confirmPassword(code, newPassword, {
+      onSuccess: () => resolve(),
+      onFailure: (err) => reject(err),
+    });
+  });
+}
+
 export function signIn(email: string, password: string): Promise<CognitoUserSession> {
   return new Promise((resolve, reject) => {
     const user = new CognitoUser({ Username: email, Pool: userPool() });

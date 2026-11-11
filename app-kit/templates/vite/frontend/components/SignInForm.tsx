@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useAuth } from "./AuthProvider";
 import { SignUpForm } from "./SignUpForm";
+import { ForgotPasswordForm } from "./ForgotPasswordForm";
 
 export function SignInForm() {
   const { signIn } = useAuth();
@@ -12,15 +13,32 @@ export function SignInForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [info, setInfo] = useState<string | null>(null);
+  const [mode, setMode] = useState<"signin" | "signup" | "reset">("signin");
 
   if (mode === "signup") {
     return <SignUpForm onCancel={() => setMode("signin")} />;
   }
 
+  if (mode === "reset") {
+    return (
+      <ForgotPasswordForm
+        initialEmail={email}
+        onCancel={() => setMode("signin")}
+        onDone={() => {
+          setPassword("");
+          setError(null);
+          setInfo("Password reset. Sign in with your new password.");
+          setMode("signin");
+        }}
+      />
+    );
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setInfo(null);
     setSubmitting(true);
     try {
       await signIn(email, password);
@@ -51,7 +69,16 @@ export function SignInForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <button
+                type="button"
+                onClick={() => setMode("reset")}
+                className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+              >
+                Forgot password?
+              </button>
+            </div>
             <Input
               id="password"
               type="password"
@@ -61,6 +88,7 @@ export function SignInForm() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+          {info && <p className="text-sm text-muted-foreground">{info}</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
         <CardFooter className="flex flex-col gap-2">

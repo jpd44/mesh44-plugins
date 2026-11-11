@@ -82,6 +82,7 @@ For the **Vite** stack, copy from `templates/vite/frontend/`:
 | `components/SignInForm.tsx` | `<app>/src/components/SignInForm.tsx` |
 | `components/SignUpForm.tsx` | `<app>/src/components/SignUpForm.tsx` |
 | `components/ConfirmSignUpForm.tsx` | `<app>/src/components/ConfirmSignUpForm.tsx` |
+| `components/ForgotPasswordForm.tsx` | `<app>/src/components/ForgotPasswordForm.tsx` |
 | `.env.example` | `<app>/.env.example` (merge if one already exists) |
 
 Then in the new app's root:
