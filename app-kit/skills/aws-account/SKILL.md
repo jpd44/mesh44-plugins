@@ -159,6 +159,29 @@ AWS_PROFILE=child-<app-name> aws sts get-caller-identity
 
 Confirm the account ID matches `$NEW_ACCOUNT_ID` and the `Arn` includes the permission set name.
 
+## If sign-in to the new account fails
+
+`aws sso login --profile child-<app-name>` can succeed while every call afterwards fails with `503 Service Unavailable` (or `InternalServerException`) from `GetRoleCredentials`, and the access portal shows "Account sign in error … internal error". This happened on 2026-11-15 for over an hour, for all accounts, not only the new one: an Identity Center outage that AWS didn't post on its status page.
+
+1. Confirm the setup on our side is fine: `list-account-assignments` shows the assignment, and the account has an `AWSReservedSSO_<permission set>_…` role. If both are there, step 4 worked.
+2. Re-provision once: `aws sso-admin provision-permission-set --instance-arn "$INSTANCE_ARN" --permission-set-arn "$PERMISSION_SET_ARN" --target-type AWS_ACCOUNT --target-id "$NEW_ACCOUNT_ID"`. Harmless, and it fixes the account-specific case.
+3. Ask the user to try another account in the portal. If that fails too, it's an AWS outage: wait, and re-run `aws sso login` later.
+4. To keep going meanwhile, use the `mgt` session if it's still cached (Identity Center credentials last about an hour) to assume the role the account was created with, and export the credentials for that shell only:
+
+   ```bash
+   eval $(AWS_PROFILE=mgt aws sts assume-role \
+     --role-arn arn:aws:iam::$NEW_ACCOUNT_ID:role/OrganizationAccountAccessRole \
+     --role-session-name app-kit-setup \
+     --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text \
+     | awk '{print "export AWS_ACCESS_KEY_ID="$1" AWS_SECRET_ACCESS_KEY="$2" AWS_SESSION_TOKEN="$3}')
+   unset AWS_PROFILE; export AWS_REGION=us-east-1
+   ```
+
+   CDK and the AWS CLI pick these up. A profile with `role_arn` + `source_profile = mgt` doesn't help, because it fetches fresh SSO credentials and hits the same 503.
+5. For the console, the user can sign in to `mgt` (as root if Identity Center is down) and use `https://signin.aws.amazon.com/switchrole?roleName=OrganizationAccountAccessRole&account=<NEW_ACCOUNT_ID>&displayName=<app-name>`. Switch role only works from a signed-in `mgt` console session; otherwise it says "Invalid information in one or more fields".
+
+Never read or copy tokens from `~/.aws/sso/cache` to work around this.
+
 ## Things to skip
 
 - Don't create IAM users. Identity Center permission set + the assignment above is the whole auth story.

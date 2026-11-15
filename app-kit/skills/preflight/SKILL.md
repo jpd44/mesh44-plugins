@@ -69,6 +69,8 @@ command -v npx  >/dev/null && npx --version
 
 If any is missing, the fix is `brew install aws-cli gh mise node git` (npm + npx ship with node).
 
+Also warn (don't fail) when the AWS CLI is older than 2.17: `aws --version` → `aws-cli/2.15.2` means no `aws codeconnections` commands. Fix: `brew upgrade awscli` (user runs it).
+
 ### B. AWS — signed in to `mgt` and it's the right account
 
 ```bash

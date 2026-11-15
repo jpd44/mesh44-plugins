@@ -81,9 +81,11 @@ You only do this once for the management account. After that, the `aws-account` 
 Install AWS CLI v2 (not v1 — Identity Center support is v2 only):
 
 ```bash
-brew install awscli
+brew install awscli    # or `brew upgrade awscli`
 aws --version          # should print aws-cli/2.x
 ```
+
+Keep it current. Releases before mid-2024 (for example 2.15.x) don't have the `aws codeconnections` commands, which is why the shared-connection setup below goes through CloudFormation, and other newer services are missing too.
 
 Add an entry to `~/.aws/config` for the management account. Substitute your real values:
 
@@ -159,11 +161,19 @@ aws ram create-resource-share --name <your-org>-github-connection --resource-arn
   --principals "$ORG" --no-allow-external-principals
 ```
 
-Then, once:
+Then authorize it. This is the only console step, and you do it once for all future apps:
 
-1. In the `mgt` console: Developer Tools → Settings → Connections → `<your-org>-github` → **Update pending connection**, and install the AWS Connector GitHub app on your org.
-2. In the app's settings on GitHub, set repository access to **All repositories**, so new app repos work without changes.
-3. Put the ARN in `~/.config/mesh44/config.json` as `github.connection_arn`.
+1. Sign in to the **management** account in the AWS console (through your access portal, `mgt` → AdministratorAccess → Management console).
+2. Open `https://console.aws.amazon.com/codesuite/settings/<YOUR_MGT_ACCOUNT_ID>/us-east-1/codeconnections/connections`, select `<your-org>-github` and choose **Update pending connection**.
+3. In the GitHub window, install (or pick the existing) **AWS Connector for GitHub** app on your org, and under **Repository access** choose **All repositories**. With "Only select repositories", every new app repo has to be added by hand and its pipeline fails with `Could not access the GitHub repository`. To change this later: GitHub → Settings → Applications → AWS Connector for GitHub → Configure.
+4. Back in the console, click **Connect**. The status should read **Available**. Check from the terminal:
+
+   ```bash
+   AWS_PROFILE=mgt aws codestar-connections get-connection --region us-east-1 \
+     --connection-arn "$ARN" --query 'Connection.ConnectionStatus' --output text   # AVAILABLE
+   ```
+
+5. Put the ARN in `~/.config/mesh44/config.json` as `github.connection_arn`. Preflight refuses to run `/new-app` until the connection is `AVAILABLE`.
 
 Sharing needs a `codeconnections` ARN; older `codestar-connections` connections can't be shared. Apps created before app-kit 0.1.8 keep their own per-app connection.
 
