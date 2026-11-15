@@ -24,10 +24,15 @@ Node version: 24.14.0 (managed via mise — `mise install` to set up).
 
 ## Conventions
 
-- shadcn/ui primitives live in `src/components/ui/`; compose them rather than reaching for raw HTML or new UI libraries.
+- {{UI_LIBRARY_CONVENTIONS}}
 - Use `cn` from `src/lib/utils.ts` for conditional Tailwind classes.
 - TypeScript is `strict`; `npm run lint` will fail on unused symbols.
 - Path alias: `@/*` → `src/*`.
+
+## Visual QA and promo
+
+- After UI changes, run `/app-kit:visual-qa`: screenshots (desktop/mobile × light/dark), axe contrast checks and a design rubric. Output goes to `.app-kit/qa/` (gitignored).
+- `promo/` (if present) is a Remotion project for the app's promo video. Edit `promo/storyboard.json`, then `cd promo && npm run render`. Re-run `/app-kit:promo` to refresh its screenshots after UI changes.
 
 ## Infrastructure
 

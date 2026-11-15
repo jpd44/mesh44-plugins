@@ -1,0 +1,32 @@
+{
+  "fps": 30,
+  "brand": {
+    "primary": "#7C5CFF",
+    "accent": "#2EE6A8",
+    "background": "#0B0F14",
+    "foreground": "#F5F7FA",
+    "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
+  },
+  "background": "mesh-loop.mp4",
+  "backgroundOpacity": 0.3,
+  "scenes": [
+    { "type": "title", "seconds": 2, "text": "Idea at 9.", "sub": "Live app by lunch." },
+    { "type": "terminal", "seconds": 3, "lines": ["/app-kit:new-app"] },
+    {
+      "type": "checklist",
+      "seconds": 4,
+      "heading": "One command:",
+      "items": ["Private GitHub repo", "Its own AWS account", "Domain + TLS", "CodePipeline deploy"]
+    },
+    { "type": "screens", "seconds": 5, "images": ["shot-1.png", "shot-2.png", "shot-3.png"], "caption": "Live on its own domain" },
+    { "type": "quote", "seconds": 3.5, "text": "Amplify hides the infrastructure. app-kit hands it to you." },
+    {
+      "type": "endcard",
+      "seconds": 3,
+      "title": "mesh44",
+      "logo": "logo.svg",
+      "cta": "/plugin marketplace add jpd44/mesh44-plugins",
+      "footnote": "Open source · MIT"
+    }
+  ]
+}

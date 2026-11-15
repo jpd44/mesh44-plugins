@@ -1,0 +1,16 @@
+{
+  "fps": 30,
+  "brand": {
+    "primary": "#7C5CFF",
+    "accent": "#2EE6A8",
+    "background": "#0B0F14",
+    "foreground": "#F5F7FA",
+    "fontFamily": "Inter, ui-sans-serif, system-ui, sans-serif"
+  },
+  "scenes": [
+    { "type": "title", "seconds": 2.5, "text": "{{HOOK}}", "sub": "{{HOOK_SUB}}" },
+    { "type": "screens", "seconds": 7, "images": ["shot-1.png", "shot-2.png", "shot-3.png"], "caption": "{{SCREENS_CAPTION}}" },
+    { "type": "checklist", "seconds": 4.5, "heading": "{{FEATURES_HEADING}}", "items": ["{{FEATURE_1}}", "{{FEATURE_2}}", "{{FEATURE_3}}"] },
+    { "type": "endcard", "seconds": 3, "title": "{{APP_NAME}}", "cta": "{{CTA}}", "footnote": "Built with mesh44 app-kit" }
+  ]
+}

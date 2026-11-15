@@ -16,7 +16,9 @@ Personal Claude Code plugins for building and running a portfolio of small, well
 
 Ship a new web app end-to-end from one command: a private GitHub repo, an isolated AWS child account, an optional Route 53 domain, and a CodePipeline-driven CDK deploy (S3 + CloudFront, with optional Cognito / HTTP API / LLM Lambda).
 
-`/app-kit:new-app` · `/app-kit:preflight` · `/app-kit:aws-account` · `/app-kit:domain` · `/app-kit:github-repo` · `/app-kit:cdk-stack`
+Pick the UI library per app (shadcn, coss, HeroUI or any library URL); every app gets a visual QA pass (screenshots + axe contrast checks + design rubric) before its first commit and, optionally, a Remotion promo video.
+
+`/app-kit:new-app` · `/app-kit:preflight` · `/app-kit:visual-qa` · `/app-kit:promo` · `/app-kit:aws-account` · `/app-kit:domain` · `/app-kit:github-repo` · `/app-kit:cdk-stack`
 
 Reads `~/.config/mesh44/config.json`. Full setup + prerequisites in **[app-kit/README.md](app-kit/README.md)**.
 

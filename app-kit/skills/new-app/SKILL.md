@@ -1,5 +1,5 @@
 ---
-description: End-to-end scaffolder for a new web app. Walks through local repo setup, AWS child account, optional Route 53 domain, private GitHub repo, and CodePipeline-driven CDK deployment. Confirm with the user before any billable or destructive step.
+description: End-to-end scaffolder for a new web app. Walks through local repo setup, a first cut built with the chosen UI library (shadcn, coss, HeroUI or any library URL), visual QA, AWS child account, optional Route 53 domain, private GitHub repo, CodePipeline-driven CDK deployment and an optional Remotion promo video. Confirm with the user before any billable or destructive step.
 ---
 
 # /app-kit:new-app — full app bootstrap
@@ -44,6 +44,12 @@ Treat 4/5/6 as three separate toggles. Don't bundle them.
 7. **App description** — free-form text describing what the app does. Examples: *"joke website with language selector and culturally relative jokes"*, *"flashcard app for kanji with SRS scheduling"*, *"checklist tracker that syncs to localStorage"*. **Required** — step 1b uses this to produce a real first iteration of the app. If the user types nothing, ask again or default to "minimal landing page with the app name as the title."
 8. **Design reference URL (optional)** — a URL to a Claude Designer artifact, Stitch project, Figma frame, Dribbble shot, or any other design source. Anything `WebFetch` (or the Stitch MCP) can reach. Leave blank to skip.
 9. **Style reference URL (optional)** — a URL to an existing website whose visual language to mimic (palette, typography, density, sharp vs. rounded). E.g., `https://linear.app`, `https://daily-deutsch.com`. Leave blank to skip.
+10. **UI library** — the component library the app is built with. This sets the app's whole look, so offer it as a real choice with one line each:
+    - `shadcn` (default) — neutral, familiar, every component available.
+    - `coss` — Cal.com's design system on Base UI: very clean, consistent, mostly monochrome. Best for professional/B2B/FSI apps.
+    - `heroui` — HeroUI v3 on React Aria: soft, rounded, colorful. Best for consumer apps.
+    - `other` — the user pastes a component-library URL (Daisy UI, Align UI, Ant Design …). Read its docs and follow its install instructions; warn that libraries not built on Tailwind 4 (e.g. Ant Design) will fight the Tailwind setup.
+11. **Promo video?** — yes/no (default yes). After deploy, `/app-kit:promo` renders a 15–20 s Remotion promo from real screenshots of the app (9:16 and 16:9 MP4s). Local only; nothing is published.
 
 ## Step sequence
 
@@ -59,7 +65,13 @@ Run these in order **after** preflight has passed. After each, give a one-line s
   Current create-vite gives React 19, TypeScript 7, oxlint (`npm run lint`), and `erasableSyntaxOnly` in `tsconfig.app.json`. Keep them; don't downgrade to match older apps. Then, in order:
   1. `npm install tailwindcss @tailwindcss/vite`, add `tailwindcss()` and a `resolve.alias` of `'@' → ./src` to `vite.config.ts`, and set `src/index.css` to `@import "tailwindcss";` (Tailwind 4: no `tailwind.config`). If Cognito is on, also add `define: { global: 'globalThis' }` (see the `cdk-stack` skill's Cognito step).
   2. Add `"paths": { "@/*": ["./src/*"] }` and `"strict": true` to `tsconfig.app.json` **and** `paths` to `tsconfig.json`. Don't add `baseUrl`, because TypeScript 7 removed it. Edit these files by hand or with a JSONC-aware tool: they contain comments, so `JSON.parse` fails.
-  3. **Only then** run `CI=1 npx shadcn@latest init --yes --defaults`. Even with the alias in place, current shadcn can write `import { cn } from "cn"` (and `export { cn } from "cn"` in `src/lib/utils.ts`) **and** add the unrelated `cn` npm package to `dependencies`. Always check and repair it:
+  3. **Only then** initialize the component library chosen in round 2 (question 10):
+     - `shadcn`: `CI=1 npx shadcn@latest init --yes --defaults`.
+     - `coss`: `CI=1 npx shadcn@latest init @coss/style --yes` (coss ships as a shadcn registry: primitives, colors, sidebar and fonts in one preset). If the preset prompts despite `--yes`, accept the defaults. Add components later with `npx shadcn@latest add @coss/<component>`. Install coss's agent skill into the project so later sessions write correct Base UI code: `npx skills add cosscom/coss`.
+     - `heroui`: still run `CI=1 npx shadcn@latest init --yes --defaults` (it sets up `cn`, the `@/` alias and the tokens the auth bundle needs), then `npm i @heroui/styles @heroui/react tailwind-variants` and add `@import "@heroui/styles";` to `src/index.css` **after** `@import "tailwindcss";`. HeroUI v3 needs no provider. Install its agent skill: `npx skills add heroui-inc/heroui --skill heroui-react --agent claude-code`. Ignore any HeroUI v2/NextUI knowledge (`HeroUIProvider`, `@heroui/theme`, flat props).
+     - `other`: run the shadcn init as for `shadcn` (for `cn` and the alias), then follow the library's own install docs.
+
+     For every choice, check for a known shadcn CLI bug: even with the alias in place, current shadcn can write `import { cn } from "cn"` (and `export { cn } from "cn"` in `src/lib/utils.ts`) **and** add the unrelated `cn` npm package to `dependencies`. Always check and repair it:
      ```bash
      if grep -rq 'from "cn"' src || grep -q '"cn":' package.json; then
        npm uninstall cn && npm install clsx tailwind-merge
@@ -70,8 +82,8 @@ Run these in order **after** preflight has passed. After each, give a one-line s
      Re-run the `grep` after every `npx shadcn@latest add`, since new components can bring the bad import back.
   4. shadcn's default theme imports `@fontsource-variable/geist`. If you switch fonts, remove that `@import` from `src/index.css` too, or the build fails.
   5. Delete the Vite boilerplate (`src/App.css`, `src/assets/*`, `public/icons.svg`) and replace `public/favicon.svg`.
-- For Next.js: create `./<app-name>/` and, inside it, `npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --no-eslint --import-alias '@/*'`, then set `output: 'export'` in `next.config.ts`.
-- Then, inside `./<app-name>/`: `git init -b main` and copy `templates/shared/CLAUDE.md`, `templates/shared/mise.toml`, `templates/shared/buildspec.yml`, `templates/shared/buildspec-test.yml`, `templates/shared/.gitignore`, replacing `{{APP_NAME}}`, `{{DOMAIN}}` (empty string if skipped), `{{AWS_PROFILE}}` (set to `child-<app-name>` even though the account doesn't exist yet — first commit ships with the intended value), `{{BUILD_OUTPUT_DIR}}` (`dist` for Vite, `out` for Next.js), `{{GITHUB_OWNER}}` (`github.org` from config), and in `CLAUDE.md` `{{APP_DESCRIPTION}}` (from round 2) and `{{ARCHITECTURE_NOTES}}` (write these after step 1b, once the code exists). Merge `.gitignore` with the one the scaffolder wrote rather than overwriting it.
+- For Next.js: create `./<app-name>/` and, inside it, `npx create-next-app@latest . --typescript --tailwind --app --no-src-dir --no-eslint --import-alias '@/*'`, then set `output: 'export'` in `next.config.ts`. Then initialize the chosen UI library exactly as in Vite step 3 (the commands are the same; the CSS file is `app/globals.css`).
+- Then, inside `./<app-name>/`: `git init -b main` and copy `templates/shared/CLAUDE.md`, `templates/shared/mise.toml`, `templates/shared/buildspec.yml`, `templates/shared/buildspec-test.yml`, `templates/shared/.gitignore`, replacing `{{APP_NAME}}`, `{{DOMAIN}}` (empty string if skipped), `{{AWS_PROFILE}}` (set to `child-<app-name>` even though the account doesn't exist yet — first commit ships with the intended value), `{{BUILD_OUTPUT_DIR}}` (`dist` for Vite, `out` for Next.js), `{{GITHUB_OWNER}}` (`github.org` from config), and in `CLAUDE.md` `{{APP_DESCRIPTION}}` (from round 2), `{{UI_LIBRARY_CONVENTIONS}}` (the block for the chosen library from the table under step 1b) and `{{ARCHITECTURE_NOTES}}` (write these after step 1b, once the code exists). Merge `.gitignore` with the one the scaffolder wrote rather than overwriting it.
 - Copy `templates/<stack>/cdk/` into `./<app>/cdk/`. **Rename `lib/stack.ts` to `lib/<app-name>-stack.ts`.** Strip the block markers per the matrix in the `cdk-stack` skill, but **leave `{{AWS_ACCOUNT_ID}}` as-is in `cdk/bin/app.ts`** — we don't have the real ID yet; step 3 will fill it in.
 
 ### 1b. First-cut implementation from description + design refs (no confirmation)
@@ -83,20 +95,33 @@ This is what makes the initial commit *meaningful* instead of "Vite scaffold + m
 2. **Delegate frontend generation to the `frontend-design` skill** (the user has `frontend-design:frontend-design` enabled). Hand it:
    - The `app_description`.
    - The 3–5 design facts you extracted (or "no reference provided — pick a coherent visual language" if both URLs were blank).
+   - **The UI library and its docs URL**, with the instruction to build every screen from that library's components and theme, and to look up component APIs in its docs rather than guessing. Telling the model *which* library to design with is what stops every app from looking the same:
+     | Library | Docs to hand over | `{{UI_LIBRARY_CONVENTIONS}}` for `CLAUDE.md` |
+     | --- | --- | --- |
+     | `shadcn` | https://ui.shadcn.com/docs | shadcn/ui primitives live in `src/components/ui/`; compose them rather than reaching for raw HTML or new UI libraries. |
+     | `coss` | https://coss.com/ui/llms.txt | UI library: coss ui (Base UI + Tailwind 4, Cal.com design system). Components live in `src/components/ui/`, added with `npx shadcn@latest add @coss/<component>`. Use Base UI composition (`render` prop), not Radix `asChild`. Check https://coss.com/ui/docs before using a component; don't invent APIs. |
+     | `heroui` | https://v3.heroui.com/docs/react/components/{name}.mdx | UI library: HeroUI v3 (`@heroui/react`, React Aria + Tailwind 4). Use compound components (`Card.Header`, `Card.Content`) and `onPress`, not `onClick`. No provider. Never use v2/NextUI APIs. The Cognito auth forms use shadcn primitives in `src/components/ui/` restyled with the HeroUI tokens. |
+     | `other` | the URL the user gave | UI library: <name> (<url>). Build screens from its components and follow its docs; don't mix in other component libraries. |
    - The constraint that output must fit the round-1 stack and feature toggles.
    The `frontend-design` skill should produce a credible first iteration — real pages, real typed data shapes, real interactions — not stub pages.
 
 3. **Constraints to enforce when delegating:**
    - Stay within the round-1 stack (Vite + React OR Next.js 15).
-   - Use shadcn/ui primitives in `src/components/ui/`; install via `npx shadcn@latest add <name>` as needed.
+   - Use the chosen UI library's components for every screen (shadcn/coss: `src/components/ui/`, installed via `npx shadcn@latest add <name>` or `@coss/<name>`; heroui: import from `@heroui/react`). Don't mix libraries.
    - Use Tailwind for layout; put the extracted palette/fonts in `@theme` tokens in `src/index.css` (Tailwind 4) or `tailwind.config` (Next.js, if it ships Tailwind 3).
    - Placeholder content: don't invent real-world facts, quotes, prices or stats that would go live on a public domain. Use clearly marked placeholders, as the design reference does.
    - **Don't** add features round 1 didn't authorize. If Cognito=no, the first cut must work without auth. If API=no, all data must be client-side (typed arrays or `localStorage`).
    - Keep it tight — ~5–10 files of real app code, not a full product.
 
-4. **Sanity-check the build.** Run `npm run build`. It must pass before step 2 — a broken build in the initial commit blocks the CodePipeline from ever turning green.
+4. **Sanity-check the build.** Run `npm run build`. It must pass before step 1c — a broken build in the initial commit blocks the CodePipeline from ever turning green.
 
 5. If both `design_reference_url` and `style_reference_url` are blank, still call `frontend-design` with just the description; it's much better at making aesthetic choices than the bare template.
+
+### 1c. Visual QA (no confirmation)
+
+Invoke the `visual-qa` skill. It serves the production build, screenshots up to five routes at desktop and mobile in light and dark mode, runs axe-core contrast and accessibility checks, scores the screens against a design rubric, and fixes failures (at most two rounds). Continue to step 2 only when it reports **PASS**. If it still fails after two rounds, show the user the remaining failures and ask whether to continue anyway.
+
+This step exists because generated UIs routinely pass `npm run build` with unreadable badges, mobile overflow or an unchecked dark mode.
 
 ### 2. GitHub repo + initial commit — execute, no prompt
 
@@ -131,10 +156,16 @@ Defer to the `cdk-stack` skill. Bootstrap the child account (`cdk bootstrap aws:
 
 If `needs_cognito=true`, also write `.env.local` from the stack outputs and commit it to `.gitignore` (don't commit secrets) — then commit the new frontend files (`src/lib/auth.ts`, `src/components/Auth*.tsx`, etc.) with `git add . && git commit -m "Wire Cognito auth" && git push`.
 
-### 6. Wrap up
+### 6. Promo video — **skip if the user said no** (no confirmation)
+
+Invoke the `promo` skill. It reuses the visual-qa tooling to take promo-quality screenshots, scaffolds `promo/` from `templates/promo/`, writes a storyboard from the app description and the app's own colors, checks key frames, and renders `promo/out/promo-9x16.mp4` and `promo/out/promo-16x9.mp4`. Use the deployed URL (or domain) as the endcard CTA. Commit `promo/` (not `promo/out/`) and push.
+
+Rendering takes a few minutes. If it fails (e.g. Remotion can't download its headless Chrome), report it in the wrap-up and move on: the promo is never allowed to block the app.
+
+### 7. Wrap up
 
 - Open the new project in the user's editor (`code <path>` if VS Code is installed; otherwise just print the path).
-- Print a final checklist: authorize CodeStar connection, push any change to `main` to verify the pipeline runs end-to-end, if the LLM Lambda was selected, note that a brand-new account returns Bedrock `AccessDeniedException: …being verified` for up to ~2 hours (wait it out), and Anthropic models may ask for a one-time use-case form in the Bedrock console. The old per-model "Model access" page is retired; models auto-enable on first invoke.
+- Print a final checklist: authorize CodeStar connection, the paths of the promo MP4s (if step 6 ran), push any change to `main` to verify the pipeline runs end-to-end, if the LLM Lambda was selected, note that a brand-new account returns Bedrock `AccessDeniedException: …being verified` for up to ~2 hours (wait it out), and Anthropic models may ask for a one-time use-case form in the Bedrock console. The old per-model "Model access" page is retired; models auto-enable on first invoke.
 
 ## Guardrails
 
