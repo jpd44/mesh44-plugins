@@ -1,0 +1,24 @@
+{
+  "name": "{{APP_NAME}}-promo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render:portrait": "remotion render src/index.ts Promo-9x16 out/promo-9x16.mp4 --props=./storyboard.json",
+    "render:landscape": "remotion render src/index.ts Promo-16x9 out/promo-16x9.mp4 --props=./storyboard.json",
+    "render": "npm run render:portrait && npm run render:landscape",
+    "still": "remotion still src/index.ts Promo-9x16 --props=./storyboard.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}

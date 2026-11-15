@@ -210,7 +210,7 @@ Then, in Claude Code — with the plugin installed (see [Install](#install)) —
 The orchestrator gathers inputs in **two rounds**:
 
 - **Round 1 — infra shape:** app name, stack (Vite/Next.js), optional domain, Cognito y/n, protected API y/n, LLM Lambda y/n.
-- **Round 2 — what to build:** a free-text app description (e.g. *"joke website with language selector and culturally relative jokes"*), an optional **design reference URL** (Claude Designer, Stitch, Figma, etc.), and an optional **style reference URL** (an existing website whose visual language to mimic).
+- **Round 2 — what to build:** a free-text app description (e.g. *"joke website with language selector and culturally relative jokes"*), an optional **design reference URL** (Claude Designer, Stitch, Figma, etc.), an optional **style reference URL** (an existing website whose visual language to mimic), the **UI library** (`shadcn`, `coss`, `heroui`, or any library URL), and whether to make a **promo video**.
 
 The two-round split exists so creative inputs don't sit next to billable infra choices in the same prompt.
 
@@ -221,11 +221,13 @@ The two-round split exists so creative inputs don't sit next to billable infra c
 | 0 | Preflight | — | Verifies the config file, cwd, CLIs, `mgt` SSO, `gh` + configured-org membership, CDK reachable. Stops the run if anything fails. |
 | 1 | Local scaffold + `git init` | none | `./<app-name>/` with templates filled in, Vite/Next.js app scaffolded, `cdk/` copied with placeholders. |
 | 1b | **First-cut implementation** | none | Fetches the design + style references (via WebFetch / Stitch MCP), extracts a short list of concrete design facts, and delegates to the `frontend-design` skill to produce a real first iteration of the app from your description. Stays inside the round-1 stack and feature choices. Build must succeed before continuing. |
+| 1c | **Visual QA** | none | Serves the production build, screenshots up to five routes (desktop + mobile, light + dark), runs axe-core contrast/accessibility checks, scores a design rubric, and fixes failures (max two rounds) before anything is committed. |
 | 2 | **GitHub repo + initial commit** | none | Private `<github.org>/<app-name>` repo created via `gh`, scaffold + first-cut pushed to `main`. *Happens before AWS provisioning so your code is versioned immediately, even if later steps fail.* |
 | 3 | AWS child account | **yes** | New `child-<app-name>` account via `aws organizations create-account` (run from `mgt`), polled to SUCCESS. The skill then assigns your IAM Identity Center permission set to the new account (auto-discovers the principal from an existing child's assignment), appends a `child-<app>` profile to `~/.aws/config`, and commits the real account ID back into `cdk/bin/app.ts`. |
 | 4 | Route 53 domain | **yes** (skipped entirely if you said no) | Domain registered from `mgt`, hosted zone created in the child account, registrar pointed at the child zone's nameservers. |
 | 5 | CDK first deploy | **yes** | `cdk bootstrap` + `cdk diff` (shown for approval) + `cdk deploy` against the child account. Stack outputs (`SiteUrl`, `UserPoolId`, `ApiUrl`, etc.) are printed. If Cognito was selected, `.env.local` is written and the frontend auth bundle is committed. |
-| 6 | Wrap-up | — | Opens the project in your editor, prints the `AuthorizeConnectionUrl` you must click to finish wiring the CodeStar GitHub connection. |
+| 6 | Promo video | none (skipped if you said no) | Remotion project in `promo/`, built from real screenshots of the app and its own colors; renders `promo/out/promo-9x16.mp4` and `promo-16x9.mp4`. Never blocks the app. |
+| 7 | Wrap-up | — | Opens the project in your editor, prints the `AuthorizeConnectionUrl` you must click to finish wiring the CodeStar GitHub connection. |
 
 ### Why GitHub comes before AWS
 
@@ -244,17 +246,20 @@ claude --plugin-dir <path-to-your-clone>/app-kit
 | Skill | What it does |
 | --- | --- |
 | `/app-kit:preflight` | Verify prereqs: config file exists, local CLIs (`aws`, `gh`, `mise`, `node`, `npm`, `git`, `npx`), `mgt` SSO session is live and matches `aws.mgt_account_id` from config, GitHub is authed with configured-org membership + `repo`/`admin:org` scopes, and CDK is reachable via npx. Always runs first as step 0 of `/new-app`. |
-| `/app-kit:new-app` | End-to-end orchestrator. Runs preflight, then walks through all six steps and confirms before each billable / destructive action. |
+| `/app-kit:new-app` | End-to-end orchestrator. Runs preflight, then walks through every step and confirms before each billable / destructive action. |
 | `/app-kit:aws-account` | Create a new child account in your AWS Organization (run from the `mgt` profile) and add a matching SSO profile to `~/.aws/config`. |
 | `/app-kit:domain` | Check Route 53 domain availability and register if approved. |
 | `/app-kit:github-repo` | Create a private repo under your configured GitHub org (`github.org` in config) with sensible defaults. |
+| `/app-kit:visual-qa` | Screenshot an app's routes (desktop/mobile × light/dark), run axe-core contrast and accessibility checks, score a design rubric, fix failures. Optional external judge via `visual_qa.judge_command` (e.g. Eval Central). Step 1c of `/new-app`; rerun after any UI change. |
+| `/app-kit:promo` | Render a 15–20 s promo video for the app with Remotion (9:16 + 16:9) from a single `storyboard.json`. Also renders the app-kit advert (`templates/promo/storyboards/app-kit-advert.json`). |
 | `/app-kit:cdk-stack` | Generate the CDK stack from `templates/vite/cdk/` or `templates/nextjs/cdk/` and run the first deploy. |
 
 ## Conventions captured
 
 - **AWS org**: management account from `aws.mgt_account_id`; SSO start URL from `aws.sso_start_url`; child accounts named `child-<app>` with role from `aws.sso_role_name` (default `AdministratorAccess`) in `aws.default_region`.
 - **Toolchain**: `mise` pins `node 24.14.0` + `python 3.12`; `AWS_PROFILE` + `AWS_DEFAULT_REGION` exported via `mise.toml`.
-- **Frontend**: Vite + React 19 + TypeScript + Tailwind 4 + shadcn/ui (default) **or** Next.js 15 (static export to the same CDK stack).
+- **Frontend**: Vite + React 19 + TypeScript + Tailwind 4 **or** Next.js 15 (static export to the same CDK stack), built with the UI library you pick: shadcn/ui (default), coss ui (Cal.com's design system, clean and professional), HeroUI v3 (soft and rounded, consumer-friendly), or any library URL. The library and its rules are written into the app's `CLAUDE.md` so later sessions keep using it.
+- **Quality + marketing**: every app gets a visual QA pass before its first commit and, optionally, a Remotion promo video in `promo/`.
 - **Infra**: S3 (private, OAC) + CloudFront + CodeStar Connection + CodeBuild test + CodeBuild build/deploy. Custom domain (ACM cert + Route 53 + www→apex redirect) is optional — picking "skip" in `/new-app` serves the app from CloudFront's default URL instead.
 - **Optional blocks (per app, prompted in `/new-app`):**
   - **Cognito** — UserPool + UserPoolClient with email sign-up, email-verify required, SRP auth flow. On Vite, also drops in a ready-made auth UI: one `LoginForm` card (sign in, sign up, confirm, forgot/reset password, invite new-password), a `UserMenu` avatar dropdown in the top-right corner of every signed-in page (`SignedInShell`), an `/account` profile page with change password, and a `lib/auth.ts` SDK wrapper with friendly Cognito error messages.

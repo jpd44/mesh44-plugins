@@ -15,6 +15,26 @@
   "developer_dir": "$HOME/Developer",
   "developer_dir_symlinks": [],
 
+  "_comment_brand": "Used by /app-kit:promo. Your studio brand: the endcard of every app promo and the app-kit advert. Each app's promo uses the app's own colors first; these are the fallback. logo and background_loop are optional local files (background_loop: e.g. a Blender-rendered mesh loop, at least as long as the video).",
+  "brand": {
+    "name": "mesh44",
+    "logo": "$HOME/.config/mesh44/brand/logo.svg",
+    "background_loop": "",
+    "cta": "mesh44.com",
+    "colors": {
+      "primary": "#7C5CFF",
+      "accent": "#2EE6A8",
+      "background": "#0B0F14",
+      "foreground": "#F5F7FA"
+    },
+    "font_family": "Inter"
+  },
+
+  "_comment_visual_qa": "Optional. A command that scores screenshots against a rubric (e.g. an Eval Central LLM-as-judge run). Called as: <judge_command> --images <dir> --rubric <file> --out <json>. Leave blank to let Claude score.",
+  "visual_qa": {
+    "judge_command": ""
+  },
+
   "_comment_obsidian": "Used by the `devkb` plugin. Optional. vault defaults to ~/Documents/Obsidian Vault; folder to devkb; load_on_startup to index (off|index|full); commit_capture to off (off|on — snapshot session highlights on each git commit).",
   "obsidian": {
     "vault": "$HOME/Documents/Obsidian Vault",

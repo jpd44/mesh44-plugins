@@ -14,3 +14,6 @@ cdk/*.js
 cdk/*.d.ts
 !cdk/jest.config.js
 .aws-sam/
+.app-kit/
+promo/node_modules/
+promo/out/
