@@ -4,7 +4,7 @@ description: Render the CDK stack template into a new app's cdk/ directory, boot
 
 # /app-kit:cdk-stack — render and deploy infra
 
-This mirrors `daily-deutsch/cdk/`: S3 (private, OAC) → CloudFront (apex + www, ACM, www-to-apex redirect, SPA error rewrite) → Route 53 alias records → CodeStar GitHub connection → CodeBuild test + CodeBuild build/deploy → CodePipeline V2 with Source/Test/BuildAndDeploy stages.
+This mirrors `daily-deutsch/cdk/`: S3 (private, OAC) → CloudFront (apex + www, ACM, www-to-apex redirect, SPA error rewrite) → Route 53 alias records → the org-wide GitHub connection (shared via AWS RAM, see the README) → CodeBuild test + CodeBuild build/deploy → CodePipeline V2 with Source/Test/BuildAndDeploy stages.
 
 ## Inputs
 
@@ -30,6 +30,7 @@ Pick `templates/vite/cdk/` or `templates/nextjs/cdk/` based on the user's stack 
 | `{{AWS_ACCOUNT_ID}}` | child account ID |
 | `{{GITHUB_OWNER}}` | `github.org` from config unless overridden |
 | `{{GITHUB_BRANCH}}` | usually `main` |
+| `{{GITHUB_CONNECTION_ARN}}` | `github.connection_arn` from config (the shared `codeconnections` ARN) |
 
 **Strip the blocks the user didn't pick.** The template has these block-pair markers in `lib/<app-name>-stack.ts` and `bin/app.ts`. Block-pair stripping = delete everything from the `// BEGIN_X` line through the matching `// END_X` line, inclusive.
 
@@ -133,7 +134,7 @@ AWS_PROFILE=child-<app-name> npx cdk deploy --require-approval broadening
 
 ### 6. Post-deploy
 
-- Print the `AuthorizeConnectionUrl` CloudFormation output. **The user must click through this and authorize the GitHub app** before the pipeline can pull source. The connection sits in `PENDING` until they do.
+- No GitHub authorization step: the stack uses the org-wide connection from `github.connection_arn`, which is shared to every account in the organization through AWS RAM and was authorized once. The GitHub app must have access to the new repo; with "All repositories" selected on the AWS Connector app, that's automatic.
 - Print every applicable output: `SiteUrl`, `DistributionId`, `BucketName`, plus `LlmUrl` (public-LLM variant only) / `UserPoolId` + `UserPoolClientId` / `ApiUrl` depending on toggles. The build project already has these wired into its env vars; no manual export needed for CI builds.
 - If `needs_cognito=true`, write a `.env.local` in the app root with `VITE_AWS_REGION`, `VITE_USER_POOL_ID`, `VITE_USER_POOL_CLIENT_ID`, and (if `needs_api`) `VITE_API_URL` filled from the CloudFormation outputs, so local dev works immediately.
 - If `domain` is null, the `SiteUrl` output will be the CloudFront default domain (e.g., `https://d1234.cloudfront.net`). Print it to the user and note that they can later attach a real domain by pasting the `BEGIN_DOMAIN` block markers back in and uncommenting their `bin/app.ts` `domainName` prop.
@@ -147,4 +148,5 @@ AWS_PROFILE=child-<app-name> npx cdk deploy --require-approval broadening
 - `Cannot find module 'aws-cdk-lib'` → forgot `npm install` in `cdk/`.
 - `User is not authorized to perform: sts:AssumeRole` on bootstrap → SSO token expired; `aws sso login --profile child-<app-name>`.
 - `Cert validation pending forever` → the hosted zone isn't actually delegated yet (the `domain` skill's step 5 wasn't completed). Validation will sit until the registrar's NS records point at the child zone.
-- CodePipeline source action stuck → CodeStar connection wasn't authorized. Re-open `AuthorizeConnectionUrl`.
+- Source action fails with `Could not access the GitHub repository` → the AWS Connector GitHub app isn't installed for this repo. Set it to "All repositories" (GitHub → Settings → Applications → AWS Connector for GitHub → Configure), or add the repo.
+- Source action fails with a permissions error on the connection → the account can't see the RAM share. Check `aws ram get-resource-shares --resource-owner OTHER-ACCOUNTS` in the child account; the share is org-wide, so a missing share means RAM org sharing was turned off.

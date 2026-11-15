@@ -27,7 +27,6 @@ import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations
 import * as codebuild from "aws-cdk-lib/aws-codebuild";
 import * as codepipeline from "aws-cdk-lib/aws-codepipeline";
 import * as actions from "aws-cdk-lib/aws-codepipeline-actions";
-import * as codestar from "aws-cdk-lib/aws-codestarconnections";
 
 interface {{APP_NAME_PASCAL}}StackProps extends cdk.StackProps {
   // BEGIN_DOMAIN
@@ -36,13 +35,15 @@ interface {{APP_NAME_PASCAL}}StackProps extends cdk.StackProps {
   githubOwner: string;
   githubRepo: string;
   githubBranch: string;
+  /** Org-wide GitHub connection shared via AWS RAM (`github.connection_arn` in ~/.config/mesh44/config.json). */
+  githubConnectionArn: string;
 }
 
 export class {{APP_NAME_PASCAL}}Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: {{APP_NAME_PASCAL}}StackProps) {
     super(scope, id, props);
 
-    const { githubOwner, githubRepo, githubBranch } = props;
+    const { githubOwner, githubRepo, githubBranch, githubConnectionArn } = props;
 
     // BEGIN_DOMAIN
     const { domainName } = props;
@@ -158,11 +159,6 @@ function handler(event) {
     // BEGIN_NO_DOMAIN
     const allowedOrigins = [`https://${distribution.distributionDomainName}`, "http://localhost:5173"];
     // END_NO_DOMAIN
-
-    const connection = new codestar.CfnConnection(this, "GitHubConnection", {
-      connectionName: "{{APP_NAME}}-github",
-      providerType: "GitHub",
-    });
 
     // BEGIN_COGNITO
     const userPool = new cognito.UserPool(this, "UserPool", {
@@ -326,9 +322,23 @@ function handler(event) {
 
     const sourceOutput = new codepipeline.Artifact("SourceOutput");
 
+    // The shared connection is a `codeconnections` resource; CDK only grants the older
+    // `codestar-connections:UseConnection`, so grant the new action prefix as well.
+    const sourceActionRole = new iam.Role(this, "SourceActionRole", {
+      assumedBy: new iam.AccountRootPrincipal(),
+    });
+    sourceActionRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ["codeconnections:UseConnection", "codestar-connections:UseConnection"],
+        resources: [githubConnectionArn],
+      }),
+    );
+
     new codepipeline.Pipeline(this, "Pipeline", {
       pipelineName: "{{APP_NAME}}",
       pipelineType: codepipeline.PipelineType.V2,
+      // Single-account pipeline: skip the customer-managed KMS key (~$1/month).
+      crossAccountKeys: false,
       stages: [
         {
           stageName: "Source",
@@ -338,7 +348,8 @@ function handler(event) {
               owner: githubOwner,
               repo: githubRepo,
               branch: githubBranch,
-              connectionArn: connection.attrConnectionArn,
+              connectionArn: githubConnectionArn,
+              role: sourceActionRole,
               output: sourceOutput,
               triggerOnPush: true,
             }),
@@ -387,10 +398,5 @@ function handler(event) {
     // BEGIN_API
     new cdk.CfnOutput(this, "ApiUrl", { value: httpApi.apiEndpoint });
     // END_API
-    new cdk.CfnOutput(this, "ConnectionArn", { value: connection.attrConnectionArn });
-    new cdk.CfnOutput(this, "AuthorizeConnectionUrl", {
-      value: `https://console.aws.amazon.com/codesuite/settings/${this.account}/${this.region}/codeconnections/connections`,
-      description: "Open this after the first deploy and authorize the GitHub connection",
-    });
   }
 }

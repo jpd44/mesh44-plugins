@@ -132,6 +132,41 @@ gh api orgs/<your-org>/memberships/$(gh api user --jq .login) --jq '.role,.state
 
 The second command should print `admin` or `member` and `active`.
 
+### 4b. Org-wide GitHub connection (one-time)
+
+CodePipeline pulls source through an AWS CodeConnections connection, and AWS requires a person to authorize every new connection in the console. To do that only once, create one connection in the management account and share it with the whole organization through AWS RAM. Every child account, including ones created later, can then use it without any console step.
+
+```bash
+export AWS_PROFILE=mgt AWS_REGION=us-east-1   # sharing only works from us-east-1, us-east-2 or us-west-2
+aws ram enable-sharing-with-aws-organization
+
+# Create a `codeconnections` connection. Older CLIs can't, so use CloudFormation:
+cat > /tmp/github-connection.yaml <<'YAML'
+Resources:
+  GitHubConnection:
+    Type: AWS::CodeConnections::Connection
+    Properties: { ConnectionName: <your-org>-github, ProviderType: GitHub }
+Outputs:
+  ConnectionArn: { Value: !GetAtt GitHubConnection.ConnectionArn }
+YAML
+aws cloudformation deploy --stack-name <your-org>-github-connection --template-file /tmp/github-connection.yaml
+ARN=$(aws cloudformation describe-stacks --stack-name <your-org>-github-connection \
+  --query 'Stacks[0].Outputs[0].OutputValue' --output text)
+
+# Share it with the organization (RAM can take a few minutes to see the org after enabling).
+ORG=$(aws organizations describe-organization --query Organization.Arn --output text)
+aws ram create-resource-share --name <your-org>-github-connection --resource-arns "$ARN" \
+  --principals "$ORG" --no-allow-external-principals
+```
+
+Then, once:
+
+1. In the `mgt` console: Developer Tools → Settings → Connections → `<your-org>-github` → **Update pending connection**, and install the AWS Connector GitHub app on your org.
+2. In the app's settings on GitHub, set repository access to **All repositories**, so new app repos work without changes.
+3. Put the ARN in `~/.config/mesh44/config.json` as `github.connection_arn`.
+
+Sharing needs a `codeconnections` ARN; older `codestar-connections` connections can't be shared. Apps created before app-kit 0.1.8 keep their own per-app connection.
+
 ### 5. Local tooling
 
 ```bash
@@ -225,7 +260,7 @@ The two-round split exists so creative inputs don't sit next to billable infra c
 | 3 | AWS child account | **yes** | New `child-<app-name>` account via `aws organizations create-account` (run from `mgt`), polled to SUCCESS. The skill then assigns your IAM Identity Center permission set to the new account (auto-discovers the principal from an existing child's assignment), appends a `child-<app>` profile to `~/.aws/config`, and commits the real account ID back into `cdk/bin/app.ts`. |
 | 4 | Route 53 domain | **yes** (skipped entirely if you said no) | Domain registered from `mgt`, hosted zone created in the child account, registrar pointed at the child zone's nameservers. |
 | 5 | CDK first deploy | **yes** | `cdk bootstrap` + `cdk diff` (shown for approval) + `cdk deploy` against the child account. Stack outputs (`SiteUrl`, `UserPoolId`, `ApiUrl`, etc.) are printed. If Cognito was selected, `.env.local` is written and the frontend auth bundle is committed. |
-| 6 | Wrap-up | — | Opens the project in your editor, prints the `AuthorizeConnectionUrl` you must click to finish wiring the CodeStar GitHub connection. |
+| 6 | Wrap-up | — | Opens the project in your editor and checks the first pipeline run. No GitHub authorization step: every app uses the org-wide connection. |
 
 ### Why GitHub comes before AWS
 
@@ -255,7 +290,7 @@ claude --plugin-dir <path-to-your-clone>/app-kit
 - **AWS org**: management account from `aws.mgt_account_id`; SSO start URL from `aws.sso_start_url`; child accounts named `child-<app>` with role from `aws.sso_role_name` (default `AdministratorAccess`) in `aws.default_region`.
 - **Toolchain**: `mise` pins `node 24.14.0` + `python 3.12`; `AWS_PROFILE` + `AWS_DEFAULT_REGION` exported via `mise.toml`.
 - **Frontend**: Vite + React 19 + TypeScript + Tailwind 4 + shadcn/ui (default) **or** Next.js 15 (static export to the same CDK stack).
-- **Infra**: S3 (private, OAC) + CloudFront + CodeStar Connection + CodeBuild test + CodeBuild build/deploy. Custom domain (ACM cert + Route 53 + www→apex redirect) is optional — picking "skip" in `/new-app` serves the app from CloudFront's default URL instead.
+- **Infra**: S3 (private, OAC) + CloudFront + the shared GitHub connection + CodeBuild test + CodeBuild build/deploy. Custom domain (ACM cert + Route 53 + www→apex redirect) is optional — picking "skip" in `/new-app` serves the app from CloudFront's default URL instead.
 - **Optional blocks (per app, prompted in `/new-app`):**
   - **Cognito** — UserPool + UserPoolClient with email sign-up, email-verify required, SRP auth flow. On Vite, also drops in a ready-made auth UI: one `LoginForm` card (sign in, sign up, confirm, forgot/reset password, invite new-password), a `UserMenu` avatar dropdown in the top-right corner of every signed-in page (`SignedInShell`), an `/account` profile page with change password, and a `lib/auth.ts` SDK wrapper with friendly Cognito error messages.
   - **Protected HTTP API** — API Gateway HTTP API + `HttpJwtAuthorizer` against the user pool + sample `GET /hello` Lambda. Frontend gets `lib/api.ts` with `apiFetch()` that auto-attaches the ID token. Requires Cognito.

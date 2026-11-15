@@ -13,4 +13,5 @@ new {{APP_NAME_PASCAL}}Stack(app, "{{APP_NAME_PASCAL}}Stack", {
   githubOwner: "{{GITHUB_OWNER}}",
   githubRepo: "{{APP_NAME}}",
   githubBranch: "{{GITHUB_BRANCH}}",
+  githubConnectionArn: "{{GITHUB_CONNECTION_ARN}}",
 });

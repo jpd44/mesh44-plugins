@@ -145,6 +145,19 @@ npx --yes cdk --version
 
 Doesn't need to be installed globally — just needs npx to resolve it. If this hangs on first run, tell the user it's downloading.
 
+### G. Shared GitHub connection is AVAILABLE
+
+```bash
+CONN=$(jq -r '.github.connection_arn // empty' ~/.config/mesh44/config.json)
+AWS_PROFILE=mgt aws codestar-connections get-connection --region us-east-1 \
+  --connection-arn "$CONN" --query 'Connection.ConnectionStatus' --output text
+```
+
+Pass: `AVAILABLE`. (The `codestar-connections` CLI works on the newer `codeconnections` ARN too.)
+
+- `github.connection_arn` missing → the one-time shared-connection setup in the README hasn't been done. Stop; every stack needs it.
+- `PENDING` → the user must authorize it once: AWS console in `mgt`, Developer Tools → Settings → Connections → `jpd44-github` → Update pending connection.
+
 ## Output format
 
 After all checks complete, print **one table** like this:
@@ -160,6 +173,7 @@ Preflight checks for app-kit
   GitHub auth           [OK as <user> | NOT LOGGED IN]
   GitHub <org> access   [OK (<role>) | OK (personal account) | NOT A MEMBER | MISSING SCOPE: <list>]
   CDK reachable         [OK v<version> | FAIL]
+  GitHub connection     [OK AVAILABLE | PENDING | NOT CONFIGURED]
 
 Result: READY  (or)  NEEDS ATTENTION — see fixes below
 ```

@@ -127,14 +127,14 @@ Otherwise, defer to the `domain` skill. Check availability with `aws route53doma
 
 ### 5. CDK first deploy — **prompt before `cdk deploy`**
 
-Defer to the `cdk-stack` skill. Bootstrap the child account (`cdk bootstrap aws://<account-id>/us-east-1`), then `cdk deploy` after the user OKs the resources. After deploy, print the `AuthorizeConnectionUrl` output — the user **must** click through it to finish wiring the GitHub connection before the pipeline can pull source.
+Defer to the `cdk-stack` skill. Bootstrap the child account (`cdk bootstrap aws://<account-id>/us-east-1`), then `cdk deploy` after the user OKs the resources. The pipeline uses the org-wide GitHub connection (`github.connection_arn`), so there's no console step: the first pipeline run starts on its own after deploy.
 
 If `needs_cognito=true`, also write `.env.local` from the stack outputs and commit it to `.gitignore` (don't commit secrets) — then commit the new frontend files (`src/lib/auth.ts`, `src/components/Auth*.tsx`, etc.) with `git add . && git commit -m "Wire Cognito auth" && git push`.
 
 ### 6. Wrap up
 
 - Open the new project in the user's editor (`code <path>` if VS Code is installed; otherwise just print the path).
-- Print a final checklist: authorize CodeStar connection, push any change to `main` to verify the pipeline runs end-to-end, if the LLM Lambda was selected, note that a brand-new account returns Bedrock `AccessDeniedException: …being verified` for up to ~2 hours (wait it out), and Anthropic models may ask for a one-time use-case form in the Bedrock console. The old per-model "Model access" page is retired; models auto-enable on first invoke.
+- Print a final checklist: confirm the first pipeline run succeeded (or push any change to `main` to retrigger it), if the LLM Lambda was selected, note that a brand-new account returns Bedrock `AccessDeniedException: …being verified` for up to ~2 hours (wait it out), and Anthropic models may ask for a one-time use-case form in the Bedrock console. The old per-model "Model access" page is retired; models auto-enable on first invoke.
 
 ## Guardrails
 

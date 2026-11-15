@@ -10,7 +10,9 @@
     "account_email_template": "you+{app_name}@example.com"
   },
   "github": {
-    "org": "<your-github-org>"
+    "org": "<your-github-org>",
+    "_comment_connection": "Org-wide CodeConnections GitHub connection shared via AWS RAM. See README 'Org-wide GitHub connection'.",
+    "connection_arn": "arn:aws:codeconnections:us-east-1:<YOUR_MGT_ACCOUNT_ID>:connection/<id>"
   },
   "developer_dir": "$HOME/Developer",
   "developer_dir_symlinks": [],
